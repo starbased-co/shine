@@ -70,6 +70,27 @@ func main() {
 		}
 	}
 
+	if cfg.Bar != nil && cfg.Bar.Enabled {
+		fmt.Println("Launching status bar...")
+		panelCfg := cfg.Bar.ToPanelConfig()
+
+		// Find the shine-bar binary
+		barBinary, err := findComponentBinary("shine-bar")
+		if err != nil {
+			log.Fatalf("Failed to find shine-bar binary: %v", err)
+		}
+
+		instance, err := mgr.Launch("bar", panelCfg, barBinary)
+		if err != nil {
+			log.Fatalf("Failed to launch status bar: %v", err)
+		}
+
+		fmt.Printf("  ✓ Status bar launched (PID: %d)\n", instance.Command.Process.Pid)
+		if panelCfg.ListenSocket != "" {
+			fmt.Printf("  ✓ Remote control: %s\n", panelCfg.ListenSocket)
+		}
+	}
+
 	// List running panels
 	panels := mgr.List()
 	if len(panels) == 0 {

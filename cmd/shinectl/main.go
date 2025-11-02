@@ -17,11 +17,13 @@ func usage() {
 	fmt.Println()
 	fmt.Println("Panels:")
 	fmt.Println("  chat           Chat component")
+	fmt.Println("  bar            Status bar component")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  shinectl toggle chat")
 	fmt.Println("  shinectl show chat")
 	fmt.Println("  shinectl hide chat")
+	fmt.Println("  shinectl toggle bar")
 }
 
 func getSocketPath(panelName string) string {

@@ -28,3 +28,30 @@ focus_policy = "on-demand"
 
 # Target monitor name (empty = primary monitor)
 # output_name = "DP-1"
+
+[bar]
+# Enable/disable status bar
+enabled = true
+
+# Edge placement: top, bottom, left, right
+edge = "top"
+
+# Height in pixels (status bar should be pixel-based for consistent height)
+lines_pixels = 30
+
+# Margins in pixels
+margin_top = 0
+margin_left = 0
+margin_right = 0
+
+# Only allow one instance of this panel
+single_instance = true
+
+# Don't hide the status bar on focus loss (it's a persistent element)
+hide_on_focus_loss = false
+
+# Focus policy: not-allowed (status bar doesn't need focus)
+focus_policy = "not-allowed"
+
+# Target monitor name (empty = primary monitor)
+# output_name = "DP-1"
