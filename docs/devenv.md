@@ -1,4 +1,4 @@
-# Shine ✨
+# Shine `devenv`
 
 A Go project with bleeding-edge development environment setup using devenv + Nix.
 
@@ -15,11 +15,13 @@ This project uses [devenv](https://devenv.sh) for a reproducible development env
 ### Getting Started
 
 1. **Allow direnv** (if using direnv):
+
    ```bash
    direnv allow
    ```
 
 2. **Enter the development shell**:
+
    ```bash
    devenv shell
    ```
@@ -47,11 +49,13 @@ shine/
 ### Development Workflow
 
 **Hot reload development**:
+
 ```bash
 dev
 ```
 
 **Build the project**:
+
 ```bash
 build
 # or manually:
@@ -59,6 +63,7 @@ go build -o bin/shine ./cmd/shine
 ```
 
 **Run tests**:
+
 ```bash
 test
 # or manually:
@@ -66,6 +71,7 @@ go test -v ./...
 ```
 
 **Run linters**:
+
 ```bash
 lint
 # or manually:
@@ -75,6 +81,7 @@ golangci-lint run ./...
 ### Environment Details
 
 The devenv setup includes:
+
 - **Go 1.23** - Latest stable Go version
 - **gomod2nix** - Reproducible Go module builds
 - **Air** - Hot reload for rapid development
