@@ -13,7 +13,9 @@ import (
 )
 
 func main() {
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	// Note: Don't use tea.WithAltScreen() for thin status bars
+	// Alt screen mode is for full-screen TUIs, causes rendering issues in panels
+	p := tea.NewProgram(initialModel())
 
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
@@ -109,19 +111,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	// Styles
+	// Styles with high contrast for visibility in thin panels
+	// Use bright colors on dark/transparent background
 	activeStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("0")).
-		Background(lipgloss.Color("6")).
+		Foreground(lipgloss.Color("14")).  // Bright cyan
+		Background(lipgloss.Color("0")).    // Black background for contrast
 		Bold(true).
 		Padding(0, 1)
 
 	inactiveStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("7")).
+		Foreground(lipgloss.Color("15")).  // White
+		Background(lipgloss.Color("0")).    // Black background
 		Padding(0, 1)
 
 	clockStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("5")).
+		Foreground(lipgloss.Color("13")).  // Bright magenta
+		Background(lipgloss.Color("0")).    // Black background
 		Bold(true).
 		Padding(0, 1)
 
