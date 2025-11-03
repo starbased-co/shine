@@ -18,7 +18,6 @@ lines = 10
 margin_left = 10
 margin_right = 10
 margin_bottom = 10
-single_instance = true
 hide_on_focus_loss = true
 focus_policy = "on-demand"
 `
@@ -52,10 +51,6 @@ focus_policy = "on-demand"
 
 	if cfg.Chat.MarginLeft != 10 {
 		t.Errorf("Expected margin_left=10, got %d", cfg.Chat.MarginLeft)
-	}
-
-	if !cfg.Chat.SingleInstance {
-		t.Error("Expected single_instance=true")
 	}
 
 	if !cfg.Chat.HideOnFocusLoss {

@@ -22,7 +22,6 @@ type ChatConfig struct {
 	MarginLeft      int    `toml:"margin_left"`
 	MarginBottom    int    `toml:"margin_bottom"`
 	MarginRight     int    `toml:"margin_right"`
-	SingleInstance  bool   `toml:"single_instance"`
 	HideOnFocusLoss bool   `toml:"hide_on_focus_loss"`
 	FocusPolicy     string `toml:"focus_policy"`
 	OutputName      string `toml:"output_name"`
@@ -53,7 +52,6 @@ func (cc *ChatConfig) ToPanelConfig() *panel.Config {
 	cfg.MarginRight = cc.MarginRight
 
 	// Behavior
-	cfg.SingleInstance = cc.SingleInstance
 	cfg.HideOnFocusLoss = cc.HideOnFocusLoss
 
 	// Focus policy
@@ -85,7 +83,6 @@ type BarConfig struct {
 	MarginLeft      int    `toml:"margin_left"`
 	MarginBottom    int    `toml:"margin_bottom"`
 	MarginRight     int    `toml:"margin_right"`
-	SingleInstance  bool   `toml:"single_instance"`
 	HideOnFocusLoss bool   `toml:"hide_on_focus_loss"`
 	FocusPolicy     string `toml:"focus_policy"`
 	OutputName      string `toml:"output_name"`
@@ -116,7 +113,6 @@ func (bc *BarConfig) ToPanelConfig() *panel.Config {
 	cfg.MarginRight = bc.MarginRight
 
 	// Behavior
-	cfg.SingleInstance = bc.SingleInstance
 	cfg.HideOnFocusLoss = bc.HideOnFocusLoss
 
 	// Focus policy
@@ -148,7 +144,6 @@ type ClockConfig struct {
 	MarginLeft      int    `toml:"margin_left"`
 	MarginBottom    int    `toml:"margin_bottom"`
 	MarginRight     int    `toml:"margin_right"`
-	SingleInstance  bool   `toml:"single_instance"`
 	HideOnFocusLoss bool   `toml:"hide_on_focus_loss"`
 	FocusPolicy     string `toml:"focus_policy"`
 	OutputName      string `toml:"output_name"`
@@ -179,7 +174,6 @@ func (clc *ClockConfig) ToPanelConfig() *panel.Config {
 	cfg.MarginRight = clc.MarginRight
 
 	// Behavior
-	cfg.SingleInstance = clc.SingleInstance
 	cfg.HideOnFocusLoss = clc.HideOnFocusLoss
 
 	// Focus policy
@@ -211,7 +205,6 @@ type SysInfoConfig struct {
 	MarginLeft      int    `toml:"margin_left"`
 	MarginBottom    int    `toml:"margin_bottom"`
 	MarginRight     int    `toml:"margin_right"`
-	SingleInstance  bool   `toml:"single_instance"`
 	HideOnFocusLoss bool   `toml:"hide_on_focus_loss"`
 	FocusPolicy     string `toml:"focus_policy"`
 	OutputName      string `toml:"output_name"`
@@ -242,7 +235,6 @@ func (sic *SysInfoConfig) ToPanelConfig() *panel.Config {
 	cfg.MarginRight = sic.MarginRight
 
 	// Behavior
-	cfg.SingleInstance = sic.SingleInstance
 	cfg.HideOnFocusLoss = sic.HideOnFocusLoss
 
 	// Focus policy
@@ -272,7 +264,6 @@ func NewDefaultConfig() *Config {
 			MarginLeft:      10,
 			MarginRight:     10,
 			MarginBottom:    10,
-			SingleInstance:  true, // Enabled for shared Kitty instance architecture
 			HideOnFocusLoss: true,
 			FocusPolicy:     "on-demand",
 		},

@@ -17,9 +17,6 @@ margin_left = 10
 margin_right = 10
 margin_bottom = 10
 
-# Only allow one instance of this panel
-single_instance = true
-
 # Hide panel when it loses focus
 hide_on_focus_loss = true
 
@@ -43,9 +40,6 @@ lines_pixels = 30
 margin_top = 0
 margin_left = 0
 margin_right = 0
-
-# Only allow one instance of this panel
-single_instance = true
 
 # Don't hide the status bar on focus loss (it's a persistent element)
 hide_on_focus_loss = false

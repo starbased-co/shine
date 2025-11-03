@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -29,10 +28,9 @@ type kittyInstance struct {
 
 // Manager manages panel instances
 type Manager struct {
-	instances      map[string]*Instance
-	kittyInstance  *kittyInstance // Detected Kitty instance with remote control
-	sharedInstance *exec.Cmd      // The shared Kitty process (for kitten panel mode)
-	mu             sync.RWMutex
+	instances     map[string]*Instance
+	kittyInstance *kittyInstance // Detected Kitty instance with remote control
+	mu            sync.RWMutex
 }
 
 // NewManager creates a new panel manager
@@ -107,12 +105,11 @@ func (m *Manager) detectKittySocket() (string, error) {
 
 Troubleshooting:
 1. Ensure Kitty is running
-2. If you want single-instance mode, enable remote control:
+2. Enable remote control in Kitty:
    Add to ~/.config/kitty/kitty.conf:
      allow_remote_control yes
      listen_on unix:/tmp/@mykitty
 3. Restart Kitty
-4. Or use multi-panel mode: set single_instance=false in config
 
 Environment check:
   KITTY_WINDOW_ID: %s
@@ -153,9 +150,6 @@ To enable remote control, add to ~/.config/kitty/kitty.conf:
   listen_on unix:/tmp/@mykitty
 
 Then restart Kitty.
-
-Alternatively, set single_instance=false in your Shine config to use
-multi-panel mode (doesn't require remote control).
 
 Environment:
   KITTY_WINDOW_ID: %s
@@ -223,106 +217,9 @@ func (m *Manager) LaunchViaRemoteControl(name string, config *Config, component 
 	return instance, nil
 }
 
-// LaunchViaKittenPanel starts a panel via kitten panel (legacy mode)
-func (m *Manager) LaunchViaKittenPanel(name string, config *Config, component string) (*Instance, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Check if already running
-	if _, exists := m.instances[name]; exists {
-		return nil, fmt.Errorf("panel %s already running", name)
-	}
-
-	// Set window title for this component
-	windowTitle := fmt.Sprintf("shine-%s", name)
-	config.WindowTitle = windowTitle
-
-	// Build kitten args
-	args := config.ToKittenArgs(component)
-
-	// Create command
-	cmd := exec.Command("kitten", args...)
-
-	// In single-instance mode:
-	// - First launch: kitten panel starts and stays running
-	// - Subsequent launches: kitten panel connects, creates window, exits
-	isFirstInstance := m.sharedInstance == nil
-
-	var stderr *bufio.Scanner
-	if isFirstInstance {
-		// Only capture stderr for the first instance (the actual Kitty process)
-		stderrPipe, err := cmd.StderrPipe()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create stderr pipe for panel %s: %w", name, err)
-		}
-		stderr = bufio.NewScanner(stderrPipe)
-	}
-
-	// Start process
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start panel %s: %w", name, err)
-	}
-
-	// Track the shared Kitty instance (only for first launch)
-	if isFirstInstance {
-		m.sharedInstance = cmd
-
-		// Read stderr in background (for debugging)
-		go func() {
-			for stderr.Scan() {
-				fmt.Printf("[kitty stderr] %s\n", stderr.Text())
-			}
-		}()
-	} else {
-		// For subsequent launches, wait for the command to exit
-		// (it exits immediately after creating the window)
-		go cmd.Wait()
-	}
-
-	// Create remote control client using shared socket
-	var remote *RemoteControl
-	if config.ListenSocket != "" {
-		remote = NewRemoteControl(config.ListenSocket)
-	}
-
-	// Create instance
-	// Store the shared instance command for all panels
-	instanceCmd := m.sharedInstance
-	instance := &Instance{
-		Name:        name,
-		Command:     instanceCmd,
-		Config:      config,
-		Remote:      remote,
-		WindowTitle: windowTitle,
-	}
-
-	// Store instance
-	m.instances[name] = instance
-
-	return instance, nil
-}
-
-// Launch starts a panel (via remote control or kitten panel)
+// Launch starts a panel using Kitty's remote control API
 func (m *Manager) Launch(name string, config *Config, component string) (*Instance, error) {
-	// Route to appropriate launch method based on SingleInstance flag
-	if config.SingleInstance {
-		instance, err := m.LaunchViaRemoteControl(name, config, component)
-		if err != nil {
-			// If remote control fails, fall back to kitten panel mode
-			log.Printf("Warning: Remote control launch failed (%v), falling back to kitten panel mode", err)
-			log.Printf("Note: Set single_instance=false in config to suppress this warning")
-
-			// Create a copy of config with SingleInstance disabled to avoid recursion
-			fallbackConfig := *config
-			fallbackConfig.SingleInstance = false
-
-			return m.LaunchViaKittenPanel(name, &fallbackConfig, component)
-		}
-		return instance, nil
-	}
-
-	// Otherwise, use kitten panel approach
-	return m.LaunchViaKittenPanel(name, config, component)
+	return m.LaunchViaRemoteControl(name, config, component)
 }
 
 // Get retrieves an instance by name

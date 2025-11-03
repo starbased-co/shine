@@ -176,7 +176,6 @@ type Config struct {
 
 	// Behavior
 	HideOnFocusLoss bool
-	SingleInstance  bool
 	ToggleVisibility bool
 
 	// Output
@@ -402,10 +401,8 @@ func (c *Config) ToKittenArgs(component string) []string {
 	if c.HideOnFocusLoss {
 		args = append(args, "--hide-on-focus-loss")
 	}
-	if c.SingleInstance {
-		args = append(args, "--single-instance")
-		args = append(args, "--instance-group=shine")
-	}
+	args = append(args, "--single-instance")
+	args = append(args, "--instance-group=shine")
 	if c.ToggleVisibility {
 		args = append(args, "--toggle-visibility")
 	}

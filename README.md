@@ -99,7 +99,6 @@ lines = 10
 margin_left = 10
 margin_right = 10
 margin_bottom = 10
-single_instance = true
 hide_on_focus_loss = true
 focus_policy = "on-demand"
 ```
@@ -118,7 +117,6 @@ focus_policy = "on-demand"
 | `margin_left` | int | `0` | Left margin in pixels |
 | `margin_bottom` | int | `0` | Bottom margin in pixels |
 | `margin_right` | int | `0` | Right margin in pixels |
-| `single_instance` | bool | `false` | Only allow one instance per component |
 | `hide_on_focus_loss` | bool | `false` | Hide panel when it loses focus |
 | `focus_policy` | string | `"not-allowed"` | Focus policy: `not-allowed`, `exclusive`, `on-demand` |
 | `output_name` | string | `""` | Target monitor name (empty = primary) |

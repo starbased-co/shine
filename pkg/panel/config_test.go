@@ -54,7 +54,6 @@ func TestToKittenArgs(t *testing.T) {
 	cfg.MarginLeft = 10
 	cfg.MarginRight = 10
 	cfg.MarginBottom = 10
-	cfg.SingleInstance = true
 	cfg.HideOnFocusLoss = true
 	cfg.FocusPolicy = FocusOnDemand
 	cfg.ListenSocket = "/tmp/test.sock"
