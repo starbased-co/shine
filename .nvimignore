@@ -1,2 +1,4 @@
 docs/llms/ctx
 docs/examples/bubbletea
+go.sum
+*_test.go
