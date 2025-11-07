@@ -1223,14 +1223,11 @@ Phase 3 adds production-ready advanced features for enhanced prism management an
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget with icons"
 author = "Your Name <email@example.com>"
 license = "MIT"
-
-[dependencies]
-requires = ["shine >= 0.2.0"]
-
-[metadata]
 homepage = "https://github.com/yourname/shine-weather"
 tags = ["weather", "widget"]
 ```
@@ -1423,6 +1420,8 @@ examples/prisms/weather/
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget"
 author = "Your Name"
 license = "MIT"

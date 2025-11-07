@@ -14,9 +14,8 @@ weather/
 ## Manifest Benefits
 
 1. **Structured Metadata**: Version, author, license info
-2. **Dependencies**: Declare required shine version
-3. **Rich Discovery**: Tags, homepage, description
-4. **Validation**: Automatic manifest validation
+2. **Rich Discovery**: Tags, homepage, description
+3. **Validation**: Automatic manifest validation
 
 ## Usage
 
@@ -68,7 +67,6 @@ shine
 The manifest is validated on load:
 - Required fields: name, version, binary
 - Binary path checked for existence and permissions
-- Dependencies parsed but not enforced (informational)
 
 ## Creating Your Own
 

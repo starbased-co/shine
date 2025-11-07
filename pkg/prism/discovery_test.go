@@ -11,7 +11,7 @@ import (
 
 // setupTestDir creates a temporary directory with test binaries
 func setupTestDir(t *testing.T) (string, func()) {
-	tmpDir, err := os.MkdirTemp("", "shine-prism-test-*")
+	tmpDir, err := os.MkdirTemp("", "prism-prism-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -45,18 +45,10 @@ func TestNewManager(t *testing.T) {
 	defer cleanup()
 
 	searchPaths := []string{tmpDir}
-	pm := NewManager(searchPaths, true)
+	pm := NewManager(searchPaths)
 
 	if pm == nil {
 		t.Fatal("NewManager returned nil")
-	}
-
-	if len(pm.searchPaths) != 1 {
-		t.Errorf("Expected 1 search path, got %d", len(pm.searchPaths))
-	}
-
-	if !pm.autoPath {
-		t.Error("Expected autoPath to be true")
 	}
 
 	if pm.cache == nil {
@@ -75,7 +67,7 @@ func TestAugmentPATH(t *testing.T) {
 	defer os.Setenv("PATH", origPath)
 
 	searchPaths := []string{tmpDir1, tmpDir2}
-	_ = NewManager(searchPaths, true)
+	_ = NewManager(searchPaths)
 
 	// Verify PATH was augmented
 	newPath := os.Getenv("PATH")
@@ -112,9 +104,9 @@ func TestFindPrism_InCache(t *testing.T) {
 	tmpDir, cleanup := setupTestDir(t)
 	defer cleanup()
 
-	binaryPath := createTestBinary(t, tmpDir, "shine-bar")
+	binaryPath := createTestBinary(t, tmpDir, "prism-bar")
 
-	pm := NewManager([]string{tmpDir}, false)
+	pm := NewManager([]string{tmpDir})
 
 	// Pre-populate cache
 	pm.cache["bar"] = binaryPath
@@ -136,7 +128,7 @@ func TestFindPrism_ExplicitBinaryPath(t *testing.T) {
 
 	binaryPath := createTestBinary(t, tmpDir, "custom-binary")
 
-	pm := NewManager([]string{}, false)
+	pm := NewManager([]string{})
 
 	cfg := &config.PrismConfig{
 		Binary: binaryPath,
@@ -156,22 +148,22 @@ func TestFindPrism_InPATH(t *testing.T) {
 	tmpDir, cleanup := setupTestDir(t)
 	defer cleanup()
 
-	createTestBinary(t, tmpDir, "shine-bar")
+	createTestBinary(t, tmpDir, "prism-bar")
 
 	// Add to PATH
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
 	os.Setenv("PATH", tmpDir+string(os.PathListSeparator)+origPath)
 
-	pm := NewManager([]string{}, false)
+	pm := NewManager([]string{})
 
 	path, err := pm.FindPrism("bar", nil)
 	if err != nil {
 		t.Fatalf("Failed to find prism: %v", err)
 	}
 
-	if !strings.Contains(path, "shine-bar") {
-		t.Errorf("Expected path to contain shine-bar, got %s", path)
+	if !strings.Contains(path, "prism-bar") {
+		t.Errorf("Expected path to contain prism-bar, got %s", path)
 	}
 }
 
@@ -179,17 +171,17 @@ func TestFindPrism_InSearchPaths(t *testing.T) {
 	tmpDir, cleanup := setupTestDir(t)
 	defer cleanup()
 
-	createTestBinary(t, tmpDir, "shine-clock")
+	createTestBinary(t, tmpDir, "prism-clock")
 
-	pm := NewManager([]string{tmpDir}, false)
+	pm := NewManager([]string{tmpDir})
 
 	path, err := pm.FindPrism("clock", nil)
 	if err != nil {
 		t.Fatalf("Failed to find prism: %v", err)
 	}
 
-	if !strings.Contains(path, "shine-clock") {
-		t.Errorf("Expected path to contain shine-clock, got %s", path)
+	if !strings.Contains(path, "prism-clock") {
+		t.Errorf("Expected path to contain prism-clock, got %s", path)
 	}
 
 	// Verify it was cached
@@ -199,7 +191,7 @@ func TestFindPrism_InSearchPaths(t *testing.T) {
 }
 
 func TestFindPrism_NotFound(t *testing.T) {
-	pm := NewManager([]string{}, false)
+	pm := NewManager([]string{})
 
 	_, err := pm.FindPrism("nonexistent", nil)
 	if err == nil {
@@ -215,11 +207,10 @@ func TestFindPrism_CustomBinaryName(t *testing.T) {
 	tmpDir, cleanup := setupTestDir(t)
 	defer cleanup()
 
-	// Create with the expected naming convention since Binary field
-	// doesn't contain a path separator
-	createTestBinary(t, tmpDir, "shine-custom-widget")
+	// Create binary with custom name
+	createTestBinary(t, tmpDir, "custom-widget")
 
-	pm := NewManager([]string{tmpDir}, false)
+	pm := NewManager([]string{tmpDir})
 
 	cfg := &config.PrismConfig{
 		Binary: "custom-widget",
@@ -230,112 +221,8 @@ func TestFindPrism_CustomBinaryName(t *testing.T) {
 		t.Fatalf("Failed to find prism: %v", err)
 	}
 
-	if !strings.Contains(path, "shine-custom-widget") {
-		t.Errorf("Expected path to contain shine-custom-widget, got %s", path)
-	}
-}
-
-func TestResolveBinaryName(t *testing.T) {
-	pm := NewManager([]string{}, false)
-
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"bar", "shine-bar"},
-		{"clock", "shine-clock"},
-		{"shine-weather", "shine-weather"},
-		{"shine-sysinfo", "shine-sysinfo"},
-	}
-
-	for _, tt := range tests {
-		result := pm.resolveBinaryName(tt.input)
-		if result != tt.expected {
-			t.Errorf("resolveBinaryName(%q) = %q, want %q", tt.input, result, tt.expected)
-		}
-	}
-}
-
-func TestDiscoverAll(t *testing.T) {
-	tmpDir, cleanup := setupTestDir(t)
-	defer cleanup()
-
-	// Create multiple test binaries
-	createTestBinary(t, tmpDir, "shine-bar")
-	createTestBinary(t, tmpDir, "shine-clock")
-	createTestBinary(t, tmpDir, "shine-weather")
-	createTestBinary(t, tmpDir, "other-binary") // Should be ignored
-
-	pm := NewManager([]string{tmpDir}, false)
-
-	prisms, err := pm.DiscoverAll()
-	if err != nil {
-		t.Fatalf("DiscoverAll failed: %v", err)
-	}
-
-	expectedCount := 3
-	if len(prisms) != expectedCount {
-		t.Errorf("Expected %d prisms, got %d", expectedCount, len(prisms))
-	}
-
-	// Check for expected prisms
-	expectedPrisms := map[string]bool{
-		"bar":     false,
-		"clock":   false,
-		"weather": false,
-	}
-
-	for _, name := range prisms {
-		if _, ok := expectedPrisms[name]; ok {
-			expectedPrisms[name] = true
-		}
-	}
-
-	for name, found := range expectedPrisms {
-		if !found {
-			t.Errorf("Expected to find prism %s", name)
-		}
-	}
-}
-
-func TestDiscoverAll_EmptyDirectory(t *testing.T) {
-	tmpDir, cleanup := setupTestDir(t)
-	defer cleanup()
-
-	pm := NewManager([]string{tmpDir}, false)
-
-	prisms, err := pm.DiscoverAll()
-	if err != nil {
-		t.Fatalf("DiscoverAll failed: %v", err)
-	}
-
-	if len(prisms) != 0 {
-		t.Errorf("Expected 0 prisms in empty directory, got %d", len(prisms))
-	}
-}
-
-func TestDiscoverAll_NonExecutable(t *testing.T) {
-	tmpDir, cleanup := setupTestDir(t)
-	defer cleanup()
-
-	// Create non-executable file
-	path := filepath.Join(tmpDir, "shine-test")
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-	f.Close()
-	// Don't make it executable
-
-	pm := NewManager([]string{tmpDir}, false)
-
-	prisms, err := pm.DiscoverAll()
-	if err != nil {
-		t.Fatalf("DiscoverAll failed: %v", err)
-	}
-
-	if len(prisms) != 0 {
-		t.Errorf("Expected 0 prisms (non-executable), got %d", len(prisms))
+	if !strings.Contains(path, "custom-widget") {
+		t.Errorf("Expected path to contain custom-widget, got %s", path)
 	}
 }
 
@@ -432,11 +319,11 @@ func TestFindPrism_PriorityOrder(t *testing.T) {
 	defer cleanup2()
 
 	// Create same binary in both directories
-	path1 := createTestBinary(t, tmpDir1, "shine-bar")
-	createTestBinary(t, tmpDir2, "shine-bar")
+	path1 := createTestBinary(t, tmpDir1, "prism-bar")
+	createTestBinary(t, tmpDir2, "prism-bar")
 
 	// tmpDir1 should have priority (listed first)
-	pm := NewManager([]string{tmpDir1, tmpDir2}, false)
+	pm := NewManager([]string{tmpDir1, tmpDir2})
 
 	foundPath, err := pm.FindPrism("bar", nil)
 	if err != nil {

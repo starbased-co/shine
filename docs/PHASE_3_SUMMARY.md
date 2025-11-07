@@ -20,16 +20,15 @@ Phase 3 adds production-ready advanced features for the Shine prism system, focu
 
 **Features**:
 - Parse `prism.toml` manifest files
-- Support structured metadata (name, version, author, license, dependencies)
+- Support core metadata (name, version, binary) and custom metadata map
 - Three discovery modes: convention, manifest, auto
 - Backward compatible with convention-based discovery
 
 **API**:
 ```go
 type Manifest struct {
-    Prism        PrismInfo
-    Dependencies *Dependencies
-    Metadata     map[string]any
+    Prism    PrismInfo
+    Metadata map[string]any
 }
 
 manifest, err := LoadManifest("prism.toml")
@@ -368,6 +367,8 @@ ok      github.com/starbased-co/shine/pkg/config        3.206s
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget"
 author = "Your Name"
 license = "MIT"

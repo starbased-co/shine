@@ -15,14 +15,11 @@ func TestManifestParsing(t *testing.T) {
 name = "test-prism"
 version = "1.0.0"
 binary = "shine-test"
+
+[metadata]
 description = "Test prism"
 author = "Test Author"
 license = "MIT"
-
-[dependencies]
-requires = ["shine >= 0.2.0"]
-
-[metadata]
 homepage = "https://example.com"
 `
 
@@ -84,7 +81,7 @@ func TestManifestValidation(t *testing.T) {
 					Binary: "shine-test",
 				},
 			},
-			expectError: true,
+			expectError: false,
 		},
 		{
 			name: "missing binary",
@@ -125,6 +122,8 @@ func TestDiscoveryByManifest(t *testing.T) {
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget"
 `
 	manifestPath := filepath.Join(prismDir, "prism.toml")

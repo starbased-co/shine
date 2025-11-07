@@ -28,6 +28,8 @@ cat > ~/.config/shine/prisms/weather/prism.toml <<EOF
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget"
 author = "Your Name"
 license = "MIT"
@@ -137,6 +139,8 @@ To use new features:
 name = "weather"
 version = "1.0.0"
 binary = "shine-weather"
+
+[metadata]
 description = "Weather widget"
 
 # shine.toml

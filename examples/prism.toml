@@ -17,6 +17,8 @@ version = "1.0.0"
 # Binary name (relative to this directory)
 binary = "shine-weather"
 
+# Metadata (free-form key-value pairs)
+[metadata]
 # Description (shown in prism listing)
 description = "Weather widget with icons and auto-refresh"
 
@@ -26,15 +28,7 @@ author = "Your Name <email@example.com>"
 # License
 license = "MIT"
 
-# Optional dependencies section
-[dependencies]
-# Specify minimum shine version or other requirements
-requires = [
-    "shine >= 0.2.0",
-]
-
-# Optional metadata (free-form key-value pairs)
-[metadata]
+# Additional optional metadata
 homepage = "https://github.com/yourname/shine-weather"
 repository = "https://github.com/yourname/shine-weather"
 documentation = "https://github.com/yourname/shine-weather/blob/main/README.md"

@@ -10,24 +10,15 @@ import (
 
 // Manifest represents a prism.toml file for manifest-based discovery
 type Manifest struct {
-	Prism        PrismInfo        `toml:"prism"`
-	Dependencies *Dependencies    `toml:"dependencies"`
-	Metadata     map[string]any   `toml:"metadata"`
+	Prism    PrismInfo      `toml:"prism"`
+	Metadata map[string]any `toml:"metadata"`
 }
 
 // PrismInfo contains core prism metadata
 type PrismInfo struct {
-	Name        string `toml:"name"`
-	Version     string `toml:"version"`
-	Binary      string `toml:"binary"`
-	Description string `toml:"description"`
-	Author      string `toml:"author"`
-	License     string `toml:"license"`
-}
-
-// Dependencies specifies prism requirements
-type Dependencies struct {
-	Requires []string `toml:"requires"`
+	Name    string `toml:"name"`
+	Version string `toml:"version"`
+	Binary  string `toml:"binary"`
 }
 
 // DiscoveryMode determines how prisms are discovered
@@ -61,9 +52,6 @@ func (m *Manifest) Validate() error {
 	}
 	if m.Prism.Binary == "" {
 		return fmt.Errorf("prism binary is required")
-	}
-	if m.Prism.Version == "" {
-		return fmt.Errorf("prism version is required")
 	}
 	return nil
 }

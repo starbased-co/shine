@@ -4,21 +4,15 @@
 
 # Core configuration
 [core]
-# Prism search paths (searched in priority order)
-prism_dirs = [
-    "/usr/lib/shine/prisms",      # System-wide built-in prisms
-    "~/.config/shine/prisms",      # User prisms
-    "~/.local/share/shine/prisms", # Alternative user location
+# Prism binary search paths (prepended to PATH)
+# Single path or array of paths
+path = [
+    "~/.local/share/shine/bin",  # User prism binaries
+    "~/.config/shine/bin",       # Alternative user location
+    "/usr/lib/shine/bin",        # System-wide prism binaries
 ]
-
-# Automatically add prism directories to PATH for discovery
-auto_path = true
-
-# Discovery mode: how to find prisms
-# - "convention": Use shine-* naming convention (default, fastest)
-# - "manifest": Require prism.toml manifest files
-# - "auto": Try manifest first, fall back to convention
-discovery_mode = "auto"
+# Or use a single path:
+# path = "~/.local/share/shine/bin"
 
 # Prisms - ALL widgets are prisms (unified configuration)
 # No distinction between "built-in" and "user" prisms
@@ -26,22 +20,22 @@ discovery_mode = "auto"
 [prisms.bar]
 # Status bar prism - spans full width at top
 enabled = true
-anchor = "top"              # Anchor point: top edge
-height = "30px"             # Height in pixels
-width = "100%"              # Full width (placeholder - implement % support later)
-position = "0,0"            # Position relative to anchor (top-left)
+anchor = "top"               # Anchor point: top edge
+height = "30px"              # Height in pixels
+width = "100%"               # Full width (placeholder - implement % support later)
+position = "0,0"             # Position relative to anchor (top-left)
 hide_on_focus_loss = false
 focus_policy = "not-allowed"
-output_name = "DP-2"        # CRITICAL: Always use DP-2
+output_name = "DP-2"         # CRITICAL: Always use DP-2
 
 [prisms.chat]
 # Chat panel prism - bottom center
 enabled = false
-anchor = "bottom"           # Anchor to bottom edge
-height = 10                 # 10 terminal lines
-width = 80                  # 80 columns
-position = "0,0"            # Centered on bottom edge
-margin_left = 10            # Refinement: 10px from calculated position
+anchor = "bottom"          # Anchor to bottom edge
+height = 10                # 10 terminal lines
+width = 80                 # 80 columns
+position = "0,0"           # Centered on bottom edge
+margin_left = 10           # Refinement: 10px from calculated position
 margin_right = 10
 margin_bottom = 10
 hide_on_focus_loss = true
@@ -51,11 +45,11 @@ output_name = "DP-2"
 [prisms.clock]
 # Clock widget - top-right corner
 enabled = false
-anchor = "top-right"        # Anchor to top-right corner
-width = "150px"             # 150 pixels wide
-height = "30px"             # 30 pixels high
-position = "0,0"            # At corner (0,0 relative to anchor)
-margin_right = 0            # No refinement needed
+anchor = "top-right"         # Anchor to top-right corner
+width = "150px"              # 150 pixels wide
+height = "30px"              # 30 pixels high
+position = "0,0"             # At corner (0,0 relative to anchor)
+margin_right = 0             # No refinement needed
 margin_top = 0
 focus_policy = "not-allowed"
 output_name = "DP-2"
@@ -63,10 +57,10 @@ output_name = "DP-2"
 [prisms.sysinfo]
 # System info widget - absolute positioned
 enabled = false
-anchor = "absolute"         # Absolute positioning mode
-width = "200px"             # 200 pixels wide
-height = "100px"            # 100 pixels tall
-position = "10px,40px"      # 10px from left, 40px from top
+anchor = "absolute"          # Absolute positioning mode
+width = "200px"              # 200 pixels wide
+height = "100px"             # 100 pixels tall
+position = "10px,40px"       # 10px from left, 40px from top
 focus_policy = "not-allowed"
 output_name = "DP-2"
 
@@ -96,16 +90,16 @@ output_name = "DP-2"
 # Spotify prism example - centered at bottom with custom positioning
 [prisms.spotify]
 enabled = true
-anchor = "bottom"             # Anchor to bottom edge
-width = "600px"               # 600 pixels wide
-height = "120px"              # 120 pixels tall
-position = "0,0"              # Centered on bottom
-margin_left = 10              # 10px refinement offset
+anchor = "bottom"          # Anchor to bottom edge
+width = "600px"            # 600 pixels wide
+height = "120px"           # 120 pixels tall
+position = "0,0"           # Centered on bottom
+margin_left = 10           # 10px refinement offset
 margin_right = 10
 margin_bottom = 10
 output_name = "DP-2"
-focus_policy = "on-demand"    # Allows keyboard controls
-hide_on_focus_loss = false    # Keep visible when not focused
+focus_policy = "on-demand" # Allows keyboard controls
+hide_on_focus_loss = false # Keep visible when not focused
 
 # System monitor prism example
 # [prisms.sysmonitor]
@@ -120,22 +114,3 @@ hide_on_focus_loss = false    # Keep visible when not focused
 # Create your own prism:
 # shinectl new-prism my-widget
 # Then configure it here as [prisms.my-widget]
-
-# ============================================================================
-# DEPRECATED CONFIG FORMAT (backward compatibility)
-# The old [bar], [chat] format is deprecated. Use [prisms.*] instead.
-# These sections will be automatically migrated to [prisms.*] internally.
-# ============================================================================
-
-# [bar]
-# enabled = true
-# edge = "top"
-# lines_pixels = 30
-# focus_policy = "not-allowed"
-
-# [chat]
-# enabled = false
-# edge = "bottom"
-# lines = 10
-# hide_on_focus_loss = true
-# focus_policy = "on-demand"

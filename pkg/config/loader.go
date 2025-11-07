@@ -53,20 +53,19 @@ func LoadOrDefault(path string) *Config {
 	// Ensure core config has defaults if not specified
 	if cfg.Core == nil {
 		cfg.Core = &CoreConfig{
-			PrismDirs: []string{
-				"/usr/lib/shine/prisms",
-				"~/.config/shine/prisms",
-				"~/.local/share/shine/prisms",
+			Path: []string{
+				"~/.local/share/shine/bin",
+				"~/.config/shine/bin",
+				"/usr/lib/shine/bin",
 			},
-			AutoPath: true,
 		}
 	} else {
 		// Set defaults if not provided
-		if len(cfg.Core.PrismDirs) == 0 {
-			cfg.Core.PrismDirs = []string{
-				"/usr/lib/shine/prisms",
-				"~/.config/shine/prisms",
-				"~/.local/share/shine/prisms",
+		if cfg.Core.Path == nil {
+			cfg.Core.Path = []string{
+				"~/.local/share/shine/bin",
+				"~/.config/shine/bin",
+				"/usr/lib/shine/bin",
 			}
 		}
 	}

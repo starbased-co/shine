@@ -12,7 +12,9 @@ func TestWatcherCreation(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "test.toml")
 
 	// Create test config file
-	if err := os.WriteFile(configPath, []byte("[core]\nauto_path = true\n"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(`[core]
+path = "~/.local/share/shine/bin"
+`), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
 
@@ -40,7 +42,9 @@ func TestWatcherDetectsChanges(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "test.toml")
 
 	// Create initial config
-	initialConfig := "[core]\nauto_path = true\n"
+	initialConfig := `[core]
+path = "~/.local/share/shine/bin"
+`
 	if err := os.WriteFile(configPath, []byte(initialConfig), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
@@ -64,7 +68,9 @@ func TestWatcherDetectsChanges(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Modify the config file
-	updatedConfig := "[core]\nauto_path = false\n"
+	updatedConfig := `[core]
+path = ["~/.local/share/shine/bin", "~/.config/shine/bin"]
+`
 	if err := os.WriteFile(configPath, []byte(updatedConfig), 0644); err != nil {
 		t.Fatalf("Failed to update config file: %v", err)
 	}
@@ -77,8 +83,9 @@ func TestWatcherDetectsChanges(t *testing.T) {
 	}
 
 	if detectedConfig != nil && detectedConfig.Core != nil {
-		if detectedConfig.Core.AutoPath {
-			t.Error("Expected AutoPath to be false after update")
+		paths := detectedConfig.Core.GetPaths()
+		if len(paths) != 2 {
+			t.Errorf("Expected 2 paths after update, got %d", len(paths))
 		}
 	}
 }

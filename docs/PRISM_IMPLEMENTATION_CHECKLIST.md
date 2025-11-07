@@ -248,12 +248,12 @@ type Config struct {
 [prism]
 name = "weather"
 version = "1.0.0"
-author = "User <user@example.com>"
-description = "Weather widget for Shine"
 binary = "shine-weather"
 
-[dependencies]
-shine_version = ">=0.2.0"
+[metadata]
+author = "User <user@example.com>"
+description = "Weather widget for Shine"
+license = "MIT"
 
 [capabilities]
 network = true

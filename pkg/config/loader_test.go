@@ -115,8 +115,7 @@ func TestLoad_PrismConfig(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "test.toml")
 
 	configContent := `[core]
-prism_dirs = ["/usr/lib/shine/prisms", "~/.config/shine/prisms"]
-auto_path = true
+path = ["/usr/lib/shine/bin", "~/.config/shine/bin"]
 
 [prisms.bar]
 enabled = true
@@ -146,12 +145,9 @@ columns_pixels = 200
 		t.Fatal("Core config is nil")
 	}
 
-	if len(cfg.Core.PrismDirs) != 2 {
-		t.Errorf("Expected 2 prism dirs, got %d", len(cfg.Core.PrismDirs))
-	}
-
-	if !cfg.Core.AutoPath {
-		t.Error("Expected AutoPath to be true")
+	paths := cfg.Core.GetPaths()
+	if len(paths) != 2 {
+		t.Errorf("Expected 2 paths, got %d", len(paths))
 	}
 
 	// Verify prisms
@@ -250,7 +246,7 @@ func TestLoadOrDefault_MixedFormat(t *testing.T) {
 
 	// Mix of new and old format
 	configContent := `[core]
-prism_dirs = ["~/.config/shine/prisms"]
+path = ["~/.config/shine/bin"]
 
 [prisms.bar]
 enabled = true
@@ -296,12 +292,9 @@ enabled = true
 		t.Fatal("Core config should be initialized")
 	}
 
-	if len(cfg.Core.PrismDirs) == 0 {
-		t.Error("Should have default prism dirs")
-	}
-
-	if !cfg.Core.AutoPath {
-		t.Error("Should have default auto_path")
+	paths := cfg.Core.GetPaths()
+	if len(paths) == 0 {
+		t.Error("Should have default paths")
 	}
 }
 
@@ -323,8 +316,8 @@ func TestPrismConfig_ToPanelConfig(t *testing.T) {
 		t.Fatal("Panel config is nil")
 	}
 
-	if panelCfg.LinesPixels != 30 {
-		t.Errorf("Expected lines_pixels 30, got %d", panelCfg.LinesPixels)
+	if panelCfg.Height.Value != 30 || !panelCfg.Height.IsPixels {
+		t.Errorf("Expected height 30px, got %+v", panelCfg.Height)
 	}
 
 	if panelCfg.MarginTop != 10 {

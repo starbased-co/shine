@@ -21,23 +21,8 @@ func main() {
 	fmt.Printf("✨ Shine - Hyprland Layer Shell TUI Toolkit\n")
 	fmt.Printf("Configuration: %s\n\n", configPath)
 
-	// Parse discovery mode
-	discoveryMode := prism.DiscoveryAuto
-	if cfg.Core.DiscoveryMode != "" {
-		switch cfg.Core.DiscoveryMode {
-		case "convention":
-			discoveryMode = prism.DiscoveryConvention
-		case "manifest":
-			discoveryMode = prism.DiscoveryManifest
-		case "auto":
-			discoveryMode = prism.DiscoveryAuto
-		default:
-			log.Printf("Warning: unknown discovery_mode '%s', using 'auto'", cfg.Core.DiscoveryMode)
-		}
-	}
-
-	// Initialize prism manager
-	prismMgr := prism.NewManagerWithMode(cfg.Core.PrismDirs, cfg.Core.AutoPath, discoveryMode)
+	// Initialize prism manager with configured search paths
+	prismMgr := prism.NewManager(cfg.Core.GetPaths())
 
 	// Create panel manager
 	panelMgr := panel.NewManager()

@@ -19,15 +19,35 @@ type Config struct {
 
 // CoreConfig holds global shine settings
 type CoreConfig struct {
-	// PrismDirs specifies directories to search for prism binaries (in priority order)
-	PrismDirs []string `toml:"prism_dirs"`
+	// Path specifies directories to prepend to PATH for prism binary discovery
+	// Can be a single string or array of strings
+	// Example: "~/.local/share/shine/bin" or ["~/.local/share/shine/bin", "~/.config/shine/bin"]
+	Path interface{} `toml:"path"`
+}
 
-	// AutoPath automatically adds prism directories to PATH for discovery
-	AutoPath bool `toml:"auto_path"`
+// GetPaths normalizes the Path field to []string
+// Handles both string and []string types
+func (cc *CoreConfig) GetPaths() []string {
+	if cc.Path == nil {
+		return []string{}
+	}
 
-	// DiscoveryMode determines how prisms are discovered
-	// Options: "convention" (shine-* naming), "manifest" (prism.toml), "auto" (try both)
-	DiscoveryMode string `toml:"discovery_mode"`
+	switch v := cc.Path.(type) {
+	case string:
+		return []string{v}
+	case []interface{}:
+		paths := make([]string, 0, len(v))
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				paths = append(paths, str)
+			}
+		}
+		return paths
+	case []string:
+		return v
+	default:
+		return []string{}
+	}
 }
 
 // PrismConfig is the unified configuration for ALL prisms (built-in and user)
@@ -426,12 +446,11 @@ func (sic *SysInfoConfig) ToPanelConfig() *panel.Config {
 func NewDefaultConfig() *Config {
 	return &Config{
 		Core: &CoreConfig{
-			PrismDirs: []string{
-				"/usr/lib/shine/prisms",
-				"~/.config/shine/prisms",
-				"~/.local/share/shine/prisms",
+			Path: []string{
+				"~/.local/share/shine/bin",
+				"~/.config/shine/bin",
+				"/usr/lib/shine/bin",
 			},
-			AutoPath: true,
 		},
 		Prisms: map[string]*PrismConfig{
 			"bar": {
