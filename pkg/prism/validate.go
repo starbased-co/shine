@@ -27,7 +27,7 @@ func Validate(binaryPath string) (*ValidationResult, error) {
 	}
 
 	// Check 1: File exists
-	info, err := os.Stat(binaryPath)
+	_, err := os.Stat(binaryPath)
 	if err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, fmt.Sprintf("File not found: %v", err))
@@ -41,48 +41,19 @@ func Validate(binaryPath string) (*ValidationResult, error) {
 		return result, nil
 	}
 
-	// Check 3: File size warning
-	const maxRecommendedSize = 100 * 1024 * 1024 // 100MB
-	if info.Size() > maxRecommendedSize {
-		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("Large binary size: %d MB", info.Size()/(1024*1024)))
-	}
-
-	// Check 4: Detect if it's a script
-	if isScript(binaryPath) {
-		result.Warnings = append(result.Warnings, "Binary appears to be a script (shebang detected)")
-	}
-
-	// Check 5: Try to detect ELF binary type
+	// Check 3: Try to detect ELF binary type
 	capabilities, err := detectCapabilities(binaryPath)
 	if err == nil {
 		result.Capabilities = capabilities
 	}
 
-	// Check 6: Try running with --version
+	// Check 4: Try running with --version
 	versionOutput, err := checkVersion(binaryPath)
 	if err == nil && versionOutput != "" {
 		result.Capabilities = append(result.Capabilities, "version-flag")
 	}
 
 	return result, nil
-}
-
-// isScript checks if a file starts with a shebang
-func isScript(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-
-	buf := make([]byte, 2)
-	n, err := f.Read(buf)
-	if err != nil || n < 2 {
-		return false
-	}
-
-	return buf[0] == '#' && buf[1] == '!'
 }
 
 // detectCapabilities attempts to detect binary capabilities

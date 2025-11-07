@@ -24,50 +24,51 @@ discovery_mode = "auto"
 # No distinction between "built-in" and "user" prisms
 
 [prisms.bar]
-# Status bar prism
+# Status bar prism - spans full width at top
 enabled = true
-edge = "top"
-lines_pixels = 30
-margin_top = 0
-margin_left = 0
-margin_right = 0
+anchor = "top"              # Anchor point: top edge
+height = "30px"             # Height in pixels
+width = "100%"              # Full width (placeholder - implement % support later)
+position = "0,0"            # Position relative to anchor (top-left)
 hide_on_focus_loss = false
 focus_policy = "not-allowed"
-# output_name = "DP-2"  # Specify target monitor
+output_name = "DP-2"        # CRITICAL: Always use DP-2
 
 [prisms.chat]
-# Chat panel prism
+# Chat panel prism - bottom center
 enabled = false
-edge = "bottom"
-lines = 10
-margin_left = 10
+anchor = "bottom"           # Anchor to bottom edge
+height = 10                 # 10 terminal lines
+width = 80                  # 80 columns
+position = "0,0"            # Centered on bottom edge
+margin_left = 10            # Refinement: 10px from calculated position
 margin_right = 10
 margin_bottom = 10
 hide_on_focus_loss = true
 focus_policy = "on-demand"
-# output_name = "DP-2"
+output_name = "DP-2"
 
 [prisms.clock]
-# Clock widget prism
+# Clock widget - top-right corner
 enabled = false
-edge = "top-right"
-columns_pixels = 150
-lines_pixels = 30
+anchor = "top-right"        # Anchor to top-right corner
+width = "150px"             # 150 pixels wide
+height = "30px"             # 30 pixels high
+position = "0,0"            # At corner (0,0 relative to anchor)
+margin_right = 0            # No refinement needed
 margin_top = 0
-margin_right = 0
 focus_policy = "not-allowed"
-# output_name = "DP-2"
+output_name = "DP-2"
 
 [prisms.sysinfo]
-# System info widget prism
+# System info widget - absolute positioned
 enabled = false
-edge = "top-left"
-columns_pixels = 200
-lines_pixels = 100
-margin_top = 40
-margin_left = 10
+anchor = "absolute"         # Absolute positioning mode
+width = "200px"             # 200 pixels wide
+height = "100px"            # 100 pixels tall
+position = "10px,40px"      # 10px from left, 40px from top
 focus_policy = "not-allowed"
-# output_name = "DP-2"
+output_name = "DP-2"
 
 # ============================================================================
 # EXAMPLE PRISMS
@@ -92,13 +93,14 @@ focus_policy = "not-allowed"
 # margin_right = 0
 # focus_policy = "not-allowed"
 
-# Spotify prism example
+# Spotify prism example - centered at bottom with custom positioning
 [prisms.spotify]
 enabled = true
-edge = "bottom"
-columns_pixels = 600
-lines_pixels = 120
-margin_left = 10
+anchor = "bottom"             # Anchor to bottom edge
+width = "600px"               # 600 pixels wide
+height = "120px"              # 120 pixels tall
+position = "0,0"              # Centered on bottom
+margin_left = 10              # 10px refinement offset
 margin_right = 10
 margin_bottom = 10
 output_name = "DP-2"

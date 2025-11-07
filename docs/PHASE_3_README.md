@@ -62,28 +62,6 @@ vim ~/.config/shine/shine.toml
 # (1 second detection latency)
 ```
 
-### 3. Validation
-
-Validate a prism binary before using it:
-
-```bash
-# In your prism development workflow
-go build -o shine-myprism
-```
-
-```go
-// In code
-import "github.com/starbased-co/shine/pkg/prism"
-
-result, _ := prism.Validate("./shine-myprism")
-if !result.Valid {
-    log.Fatalf("Invalid: %v", result.Errors)
-}
-for _, warn := range result.Warnings {
-    log.Printf("Warning: %s", warn)
-}
-```
-
 ### 4. Lifecycle Management
 
 For advanced use cases (custom launchers, monitoring tools):
@@ -116,11 +94,11 @@ lifecycleMgr.Reload("weather", updatedCfg)
 
 Choose how shine finds prisms:
 
-| Mode | Behavior | Use Case |
-|------|----------|----------|
-| `convention` | Use shine-* naming only | Fastest, simple setups |
-| `manifest` | Require prism.toml files | Structured, curated collections |
-| `auto` | Try manifest, fall back to convention | Best of both worlds (recommended) |
+| Mode         | Behavior                              | Use Case                          |
+| ------------ | ------------------------------------- | --------------------------------- |
+| `convention` | Use shine-\* naming only              | Fastest, simple setups            |
+| `manifest`   | Require prism.toml files              | Structured, curated collections   |
+| `auto`       | Try manifest, fall back to convention | Best of both worlds (recommended) |
 
 Set in config:
 
@@ -242,6 +220,7 @@ Error: prism weather not found via manifest discovery
 ```
 
 **Solution**: Ensure directory name matches prism name:
+
 ```bash
 ~/.config/shine/prisms/weather/  # ← must match "weather"
 ├── prism.toml
@@ -258,6 +237,7 @@ Warning: Binary appears to be a script (shebang detected)
 ### Hot reload not working
 
 **Check**:
+
 1. Config file is writable
 2. Using absolute path or proper expansion
 3. Waiting at least 1 second after save
@@ -290,6 +270,7 @@ Phase 3 maintains security:
 ## Support
 
 For issues or questions:
+
 1. Check this README
 2. See Phase 3 Summary document
 3. Review test files for API examples
