@@ -212,12 +212,12 @@ Edit `~/.config/shine/shine.toml`:
 ```toml
 [prisms.weather]
 enabled = true
-edge = "top-right"
-columns_pixels = 300
-lines_pixels = 50
-margin_top = 0
-margin_right = 0
+origin = "top-right"
+width = "300px"
+height = "50px"
+position = "0,0"
 focus_policy = "not-allowed"
+output_name = "DP-2"
 ```
 
 ### Step 6: Launch
@@ -359,19 +359,34 @@ func main() {
 
 ### Custom Configuration Fields
 
-Extend prism configuration with custom fields:
+**Recommended approach:** Use the `metadata` field in your `prism.toml`:
+
+```toml
+# In your prism's prism.toml file
+name = "weather"
+version = "1.0.0"
+enabled = false  # Default, user can override in shine.toml
+
+[metadata]
+api_key = "default-api-key"
+location = "San Francisco"
+units = "imperial"
+refresh_interval = 300
+```
+
+**Important:** Custom fields in shine.toml `[prisms.weather]` sections are NOT preserved. Use `metadata` in prism.toml for prism-specific configuration.
+
+Users can override standard fields in shine.toml:
 
 ```toml
 [prisms.weather]
 enabled = true
-edge = "top"
-# Custom fields
-api_key = "your-api-key"
-location = "San Francisco"
-units = "imperial"
+origin = "top-right"
+width = "300px"
+height = "50px"
 ```
 
-Read configuration in your prism:
+Read metadata in your prism:
 
 ```go
 import (
@@ -380,41 +395,41 @@ import (
 	"path/filepath"
 )
 
-type WeatherConfig struct {
-	APIKey   string `toml:"api_key"`
-	Location string `toml:"location"`
-	Units    string `toml:"units"`
+type PrismConfig struct {
+	Name     string                 `toml:"name"`
+	Version  string                 `toml:"version"`
+	Metadata map[string]interface{} `toml:"metadata"`
 }
 
-func loadConfig() WeatherConfig {
-	home, _ := os.UserHomeDir()
-	configPath := filepath.Join(home, ".config/shine/shine.toml")
-
-	var cfg struct {
-		Prisms map[string]map[string]interface{} `toml:"prisms"`
+func loadConfig() PrismConfig {
+	// Look for prism.toml in prism directory
+	prismDir := os.Getenv("PRISM_DIR")
+	if prismDir == "" {
+		prismDir = "."
 	}
+	configPath := filepath.Join(prismDir, "prism.toml")
 
-	toml.DecodeFile(configPath, &cfg)
-
-	// Extract weather config
-	weatherCfg := WeatherConfig{
-		Location: "San Francisco", // defaults
-		Units:    "imperial",
-	}
-
-	if weather, ok := cfg.Prisms["weather"]; ok {
-		if apiKey, ok := weather["api_key"].(string); ok {
-			weatherCfg.APIKey = apiKey
-		}
-		if location, ok := weather["location"].(string); ok {
-			weatherCfg.Location = location
-		}
-		if units, ok := weather["units"].(string); ok {
-			weatherCfg.Units = units
+	var cfg PrismConfig
+	if _, err := toml.DecodeFile(configPath, &cfg); err != nil {
+		// Use defaults
+		return PrismConfig{
+			Name:     "weather",
+			Metadata: make(map[string]interface{}),
 		}
 	}
 
-	return weatherCfg
+	return cfg
+}
+
+func main() {
+	cfg := loadConfig()
+
+	// Access metadata
+	apiKey, _ := cfg.Metadata["api_key"].(string)
+	location, _ := cfg.Metadata["location"].(string)
+	units, _ := cfg.Metadata["units"].(string)
+
+	// Use configuration...
 }
 ```
 
@@ -567,40 +582,38 @@ Available in `~/.config/shine/shine.toml`:
 [prisms.myprism]
 enabled = true              # Launch this prism
 
-# Layout
-edge = "top"                # top, bottom, left, right, top-left, top-right, etc.
-lines = 10                  # Height in terminal lines
-columns = 40                # Width in terminal columns
-lines_pixels = 100          # Height in pixels (overrides lines)
-columns_pixels = 300        # Width in pixels (overrides columns)
+# Positioning & Layout
+origin = "top-center"       # Anchor point on screen
+position = "0,0"            # Offset from origin as "x,y" in pixels
+width = 80                  # Width in columns (int) or pixels (string with "px")
+height = 10                 # Height in lines (int) or pixels (string with "px")
 
-# Margins
-margin_top = 0              # Top margin (pixels)
-margin_left = 0             # Left margin (pixels)
-margin_bottom = 0           # Bottom margin (pixels)
-margin_right = 0            # Right margin (pixels)
+# Alternatively, use pixel dimensions:
+# width = "300px"
+# height = "100px"
 
 # Behavior
 focus_policy = "not-allowed"  # not-allowed, on-demand, exclusive
 hide_on_focus_loss = false    # Hide when panel loses focus
-output_name = "DP-2"          # Target specific monitor (optional)
+output_name = "DP-2"          # Target specific monitor
 
-# Binary
-path = "shine-myprism"    # Custom path or binary name (optional)
+# Binary (optional)
+path = "shine-myprism"    # Custom path or binary name (defaults to shine-{name})
 ```
 
-### Edge Options
+**See [docs/configuration.md](configuration.md) for complete field documentation.**
 
-- `top` - Top edge, centered
-- `bottom` - Bottom edge, centered
-- `left` - Left edge, full height
-- `right` - Right edge, full height
+### Origin (Anchor Point) Options
+
 - `top-left` - Top-left corner
+- `top-center` - Top edge, centered horizontally
 - `top-right` - Top-right corner
+- `left-center` - Left edge, centered vertically
+- `center` - Screen center
+- `right-center` - Right edge, centered vertically
 - `bottom-left` - Bottom-left corner
+- `bottom-center` - Bottom edge, centered horizontally
 - `bottom-right` - Bottom-right corner
-- `center` - Centered (floating)
-- `background` - Full-screen background
 
 ### Focus Policies
 
@@ -610,15 +623,20 @@ path = "shine-myprism"    # Custom path or binary name (optional)
 
 ### Kitty Remote Control
 
-Shine uses Kitty's remote control protocol for panel management. Prisms don't need to interact with this directly, but it's available:
+Shine uses Kitty's remote control protocol (`kitty @`) for panel management. Prisms don't need to interact with this directly, but it's available for advanced use:
 
 ```bash
 # List windows
-kitty @ --to unix:/tmp/shine.sock ls
+kitty @ ls
 
 # Close panel
-kitty @ --to unix:/tmp/shine.sock close-window --match title:shine-weather
+kitty @ close-window --match title:shine-weather
+
+# Get window info
+kitty @ ls | jq '.[] | .tabs[] | .windows[] | select(.title == "shine-weather")'
 ```
+
+**Note:** Shine automatically handles panel launching via `kitty @ launch --type=os-panel`.
 
 ### Hyprland Integration
 
@@ -810,13 +828,14 @@ Fix:
 1. Ensure binary is named correctly: `shine-<name>`
 2. Install to PATH: `make install` or copy to `~/.local/bin/`
 3. Verify PATH includes `~/.local/bin/`: `echo $PATH`
-4. Or use prism_dirs in config:
+4. Or configure discovery paths in config:
 
 ```toml
 [core]
-prism_dirs = [
+path = [
 	"~/.config/shine/prisms",
 	"~/.local/bin",
+	"~/.local/share/shine/bin",
 ]
 ```
 

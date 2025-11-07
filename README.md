@@ -19,23 +19,24 @@ Shine is a toolkit for building beautiful TUI-based desktop shell components for
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  shine (launcher)                               │
-│  ├─ Loads ~/.config/shine/shine.toml            │
-│  ├─ Manages panel lifecycle                     │
-│  └─ Launches components via kitten panel        │
-└─────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│  shine (launcher)                                      │
+│  ├─ Loads ~/.config/shine/shine.toml                   │
+│  ├─ Discovers prisms from configured paths             │
+│  ├─ Manages prism lifecycle                            │
+│  └─ Launches prisms via Kitty remote control API       │
+└────────────────────────────────────────────────────────┘
                         │
-                        ├─ spawn ──> kitten panel ──> shine-chat (Bubble Tea TUI)
+                        ├─ kitty @ launch --type=os-panel ──> shine-prism (Bubble Tea TUI)
                         │
-                        └─ IPC ────> Unix socket (remote control)
+                        └─ IPC ────> Kitty socket
                                             │
-                                            └─ shinectl toggle chat
+                                            └─ shinectl toggle prism
 ```
 
 ## Prerequisites
 
-- **Kitty** >= 0.36.0 with `kitten panel` support
+- **Kitty** >= 0.36.0 with remote control and OS panel support
 - **Hyprland** (or other Wayland compositor with wlr-layer-shell)
 - **Go** >= 1.21
 
@@ -45,11 +46,12 @@ Verify prerequisites:
 # Check Kitty version
 kitty --version
 
-# Check if kitten panel exists
-kitten panel --help
-
 # Check Hyprland (if using Hyprland)
 hyprctl version
+
+# Ensure Kitty has remote control enabled in ~/.config/kitty/kitty.conf:
+# allow_remote_control yes
+# listen_on unix:/tmp/@mykitty
 ```
 
 ## Installation
@@ -92,34 +94,39 @@ cp examples/shine.toml ~/.config/shine/shine.toml
 Example configuration:
 
 ```toml
-[chat]
+[core]
+path = [
+    "~/.local/share/shine/bin",
+    "~/.config/shine/bin",
+    "~/.config/shine/prisms",
+]
+
+[prisms.chat]
 enabled = true
-edge = "bottom"
-lines = 10
-margin_left = 10
-margin_right = 10
-margin_bottom = 10
+origin = "bottom-center"
+height = 10
+width = 80
+position = "0,10"
 hide_on_focus_loss = true
 focus_policy = "on-demand"
+output_name = "DP-2"
 ```
 
 ### Configuration Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enabled` | bool | `false` | Enable/disable component |
-| `edge` | string | `"top"` | Panel edge: `top`, `bottom`, `left`, `right`, `center`, `center-sized`, `background` |
-| `lines` | int | `1` | Height in terminal lines |
-| `columns` | int | `1` | Width in terminal columns (for left/right edges) |
-| `lines_pixels` | int | `0` | Height in pixels (overrides `lines`) |
-| `columns_pixels` | int | `0` | Width in pixels (overrides `columns`) |
-| `margin_top` | int | `0` | Top margin in pixels |
-| `margin_left` | int | `0` | Left margin in pixels |
-| `margin_bottom` | int | `0` | Bottom margin in pixels |
-| `margin_right` | int | `0` | Right margin in pixels |
+| `enabled` | bool | `false` | Enable/disable prism |
+| `origin` | string | `"center"` | Anchor point: `top-left`, `top-center`, `top-right`, `left-center`, `center`, `right-center`, `bottom-left`, `bottom-center`, `bottom-right` |
+| `width` | int or string | `1` | Width in columns (int) or pixels (string with "px") |
+| `height` | int or string | `1` | Height in lines (int) or pixels (string with "px") |
+| `position` | string | `"0,0"` | Offset from origin as "x,y" in pixels |
 | `hide_on_focus_loss` | bool | `false` | Hide panel when it loses focus |
 | `focus_policy` | string | `"not-allowed"` | Focus policy: `not-allowed`, `exclusive`, `on-demand` |
-| `output_name` | string | `""` | Target monitor name (empty = primary) |
+| `output_name` | string | `"DP-2"` | Target monitor name |
+| `path` | string | `""` | Custom binary name or path (defaults to `shine-{name}`) |
+
+See [docs/configuration.md](docs/configuration.md) for complete configuration documentation.
 
 ## Usage
 
@@ -168,20 +175,30 @@ bind = SUPER, C, exec, shinectl toggle chat
 shine/
 ├── cmd/
 │   ├── shine/          # Main launcher
-│   ├── shine-chat/     # Chat TUI component
-│   └── shinectl/       # Control utility
+│   ├── shine-chat/     # Chat TUI component (example)
+│   └── shinectl/       # Control utility & prism generator
 ├── pkg/
+│   ├── config/         # Configuration system
+│   │   ├── types.go    # Config structures (CoreConfig, PrismConfig)
+│   │   ├── loader.go   # TOML loading
+│   │   ├── discovery.go # Prism discovery
+│   │   └── watcher.go  # Config file watching
 │   ├── panel/          # Panel management
-│   │   ├── config.go   # LayerShellConfig
-│   │   ├── manager.go  # Panel lifecycle
+│   │   ├── config.go   # Panel config & CLI args
+│   │   ├── manager.go  # Panel lifecycle via Kitty remote control
 │   │   └── remote.go   # Remote control client
-│   └── config/         # Configuration
-│       ├── types.go    # Config structures
-│       └── loader.go   # TOML loading
+│   └── prism/          # Prism management
+│       ├── manager.go  # Prism lifecycle
+│       ├── prism.go    # Prism types
+│       ├── manifest.go # Prism metadata
+│       └── validate.go # Prism validation
 ├── examples/
-│   └── shine.toml      # Example config
+│   ├── shine.toml      # Example config
+│   └── prisms/         # Example prisms (weather, spotify, sysmonitor)
 └── docs/
-    └── llms/           # LLM-optimized documentation
+    ├── configuration.md       # Configuration guide
+    ├── PRISM_DEVELOPER_GUIDE.md # Prism development guide
+    └── llms/                  # LLM-optimized documentation
 ```
 
 ### Running Tests
@@ -212,14 +229,11 @@ go build -gcflags="all=-N -l" -o bin/shine ./cmd/shine
 ### Testing Manually
 
 ```bash
-# Test shine-chat standalone (requires TTY)
+# Test prism standalone (requires TTY)
 ./bin/shine-chat
 
-# Test with kitty panel directly
-kitten panel --edge=bottom --lines=10 \
-    --margin-left=10 --margin-right=10 \
-    --listen-on=unix:/tmp/test.sock \
-    ./bin/shine-chat
+# Test with shine launcher
+./bin/shine
 
 # Test remote control
 ./bin/shinectl toggle chat

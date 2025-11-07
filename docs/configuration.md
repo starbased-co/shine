@@ -1,112 +1,207 @@
 # Shine Panel Configuration Guide
 
-This guide explains the refactored panel configuration system introduced in Phase 2.
+This guide explains the panel configuration system based on the current implementation in `pkg/`.
 
 ## Overview
 
-The configuration has been simplified from 4 size fields to 2, and "edge" has been renamed to "anchor" with enhanced positioning capabilities.
+Shine uses a unified configuration system where prisms (widgets) are configured in `~/.config/shine/shine.toml`. The configuration uses a two-field size system (`width`/`height`) and origin-based positioning.
 
-## Configuration Fields
+## Configuration Structure
 
-### Size Fields (Simplified)
+### Core Configuration
 
-Instead of separate `lines`, `columns`, `lines_pixels`, `columns_pixels` fields, we now have:
+The `[core]` section configures global Shine settings:
 
-- **`width`**: Width as integer (columns) or string with "px" (pixels)
-- **`height`**: Height as integer (lines) or string with "px" (pixels)
+```toml
+[core]
+# Directories to search for prism binaries and configurations
+# Can be a single string or array of strings
+path = [
+    "~/.local/share/shine/bin",
+    "~/.config/shine/bin",
+    "~/.config/shine/prisms",
+    "/usr/lib/shine/bin",
+]
+```
 
-**Examples:**
+### Prism Configuration
+
+Prisms are configured under `[prisms.*]` sections:
+
+```toml
+[prisms.mywidget]
+enabled = true
+origin = "top-center"
+width = 80
+height = "30px"
+position = "0,0"
+output_name = "DP-2"
+focus_policy = "not-allowed"
+hide_on_focus_loss = false
+```
+
+## Configuration Fields Reference
+
+### Core Identification
+
+#### `name` (string)
+**Required in prism.toml, optional in shine.toml**
+
+Prism identifier. In shine.toml, derived from section name (e.g., `[prisms.weather]` → name is "weather").
+
+#### `version` (string)
+**Optional, primarily for prism.toml**
+
+Semantic version string (e.g., "1.0.0").
+
+#### `path` (string)
+**Optional**
+
+Custom binary name or path. If empty, defaults to `shine-{name}`.
+
+Examples:
+- `path = "shine-weather"` - Binary name to find in PATH
+- `path = "/usr/bin/shine-weather"` - Absolute path
+
+### Runtime State
+
+#### `enabled` (bool)
+**Default: false**
+
+Controls whether this prism should be launched by Shine.
+
+```toml
+enabled = true  # Launch this prism
+```
+
+### Positioning & Layout
+
+#### `origin` (string)
+**Default: "center"**
+
+Specifies the anchor point on screen for positioning.
+
+**Valid values:**
+- `"top-left"` - Top-left corner
+- `"top-center"` - Top edge, centered horizontally
+- `"top-right"` - Top-right corner
+- `"left-center"` - Left edge, centered vertically
+- `"center"` - Screen center
+- `"right-center"` - Right edge, centered vertically
+- `"bottom-left"` - Bottom-left corner
+- `"bottom-center"` - Bottom edge, centered horizontally
+- `"bottom-right"` - Bottom-right corner
+
+```toml
+origin = "top-center"
+```
+
+#### `position` (string)
+**Format: "x,y"**
+**Default: "0,0"**
+
+Offset from the origin point in pixels. Both x and y must be integers.
+
+```toml
+position = "100,50"  # 100px horizontal, 50px vertical offset from origin
+```
+
+**Coordinate behavior by origin:**
+
+| Origin | X Direction | Y Direction |
+|--------|-------------|-------------|
+| `top-left` | Right | Down |
+| `top-center` | Horizontal offset | Down |
+| `top-right` | Left (from right edge) | Down |
+| `left-center` | Right | Vertical offset |
+| `center` | Horizontal offset | Vertical offset |
+| `right-center` | Left (from right edge) | Vertical offset |
+| `bottom-left` | Right | Up (from bottom edge) |
+| `bottom-center` | Horizontal offset | Up (from bottom edge) |
+| `bottom-right` | Left (from right edge) | Up (from bottom edge) |
+
+#### `width` (int or string)
+**Default: 1**
+
+Panel width. Can be specified as:
+- **Integer**: Terminal columns (e.g., `80`)
+- **String with "px"**: Pixels (e.g., `"1200px"`)
 
 ```toml
 width = 80           # 80 terminal columns
 width = "1200px"     # 1200 pixels
+```
+
+#### `height` (int or string)
+**Default: 1**
+
+Panel height. Can be specified as:
+- **Integer**: Terminal lines (e.g., `24`)
+- **String with "px"**: Pixels (e.g., `"600px"`)
+
+```toml
 height = 24          # 24 terminal lines
 height = "600px"     # 600 pixels
 ```
 
-### Anchor Field (renamed from "edge")
+### Behavior
 
-The `anchor` field specifies where the panel is positioned on screen.
+#### `hide_on_focus_loss` (bool)
+**Default: false**
 
-**Default:** `"center"` (changed from "top")
+Hide panel when it loses keyboard focus.
+
+```toml
+hide_on_focus_loss = true
+```
+
+**Note:** When enabled, `focus_policy` is automatically set to `"on-demand"`.
+
+#### `focus_policy` (string)
+**Default: "not-allowed"**
+
+Controls keyboard focus behavior.
 
 **Valid values:**
-
-- `"top"` - Top edge
-- `"bottom"` - Bottom edge
-- `"left"` - Left edge
-- `"right"` - Right edge
-- `"center"` - Screen center
-- `"center-sized"` - Center with sizing constraints
-- `"none"` - No anchoring
-- `"background"` - Background layer
-- `"top-left"` - Top-left corner
-- `"top-right"` - Top-right corner
-- `"bottom-left"` - Bottom-left corner
-- `"bottom-right"` - Bottom-right corner
-- `"absolute"` - Absolute positioning (NEW)
-
-### Position Field (NEW)
-
-The `position` field specifies coordinates relative to the anchor point.
-
-**Format:** `"x,y"` where each component can be:
-- Integer (interpreted as columns/lines)
-- String with "px" suffix (pixels)
-
-**Coordinate systems by anchor:**
-
-| Anchor | Origin Point | Coordinate System |
-|--------|--------------|-------------------|
-| `absolute` | Top-left (0,0) | Absolute from screen edges |
-| `center` | Screen center (0,0) | Relative to center |
-| `top` | Top-left of edge | x from left, y from top |
-| `bottom` | Bottom-left of edge | x from left, y from bottom |
-| `top-left` | Corner | Both from corner |
-| `top-right` | Corner | x from right, y from top |
-| `bottom-left` | Corner | x from left, y from bottom |
-| `bottom-right` | Corner | Both from corner (negative moves inward) |
-
-**Examples:**
+- `"not-allowed"` - Panel never receives keyboard focus (status displays)
+- `"on-demand"` - Panel can receive focus when clicked (interactive widgets)
+- `"exclusive"` - Panel always has focus when visible (rarely used)
 
 ```toml
-# Absolute positioning: 100px from left, 200px from top
-anchor = "absolute"
-position = "100px,200px"
-
-# Center with offset
-anchor = "center"
-position = "50px,0"  # 50px right of center
-
-# Top-right corner
-anchor = "top-right"
-position = "0,0"  # Exactly at corner
-
-# Bottom with horizontal offset
-anchor = "bottom"
-position = "100px,10px"  # 100px from left, 10px from bottom
+focus_policy = "on-demand"
 ```
 
-### Margin Fields (Refinement Offsets)
+#### `output_name` (string)
+**Default: "DP-2"**
 
-Margin fields now serve as **refinement offsets** rather than direct positioning.
-
-**New behavior:**
-
-```
-final_margin = position_calculated_margin + margin_refinement_from_config
-```
-
-**Example:**
+Target monitor name for panel placement.
 
 ```toml
-anchor = "bottom"
-position = "100px,50px"  # Base position
-margin_left = 20         # Add 20px refinement
-margin_bottom = -10      # Subtract 10px refinement
-
-# Final: --margin-left=120 --margin-bottom=40
+output_name = "DP-2"
 ```
+
+**CRITICAL:** Always use DP-2. Never use DP-1 as it will cause system failure.
+
+Query available monitors:
+```bash
+hyprctl monitors -j
+```
+
+### Metadata
+
+#### `metadata` (map)
+**Optional, only meaningful in prism sources**
+
+Custom key-value pairs for prism-specific configuration. Used in `prism.toml` or standalone `.toml` files.
+
+```toml
+[metadata]
+api_key = "your-api-key"
+location = "San Francisco"
+refresh_interval = 300
+```
+
+**Important:** Metadata in shine.toml `[prisms.*]` sections is ignored. Only metadata from prism sources (prism.toml, standalone .toml) is preserved during configuration merge.
 
 ## Complete Configuration Examples
 
@@ -115,9 +210,9 @@ margin_bottom = -10      # Subtract 10px refinement
 ```toml
 [prisms.bar]
 enabled = true
-anchor = "top"
+origin = "top-center"
 height = "30px"
-width = 200          # Approximate full width in columns
+width = "1920px"
 position = "0,0"
 output_name = "DP-2"
 focus_policy = "not-allowed"
@@ -128,13 +223,10 @@ focus_policy = "not-allowed"
 ```toml
 [prisms.chat]
 enabled = true
-anchor = "bottom"
+origin = "bottom-center"
 height = 10
 width = 80
-position = "0,0"
-margin_left = 10
-margin_right = 10
-margin_bottom = 10
+position = "0,10"
 output_name = "DP-2"
 focus_policy = "on-demand"
 hide_on_focus_loss = true
@@ -145,7 +237,7 @@ hide_on_focus_loss = true
 ```toml
 [prisms.clock]
 enabled = true
-anchor = "top-right"
+origin = "top-right"
 width = "150px"
 height = "30px"
 position = "0,0"
@@ -153,143 +245,334 @@ output_name = "DP-2"
 focus_policy = "not-allowed"
 ```
 
-### System Info (Absolute Positioning)
+### System Info (Custom Position)
 
 ```toml
 [prisms.sysinfo]
 enabled = true
-anchor = "absolute"
+origin = "top-left"
 width = "200px"
 height = "100px"
-position = "10px,40px"  # CSS-like absolute positioning
+position = "10,40"
 output_name = "DP-2"
 focus_policy = "not-allowed"
 ```
 
-### Spotify Player (Bottom with Custom Position)
+### Spotify Player (Bottom with Offset)
 
 ```toml
 [prisms.spotify]
 enabled = true
-anchor = "bottom"
+origin = "bottom-center"
 width = "600px"
 height = "120px"
-position = "0,0"
-margin_left = 10
-margin_right = 10
-margin_bottom = 10
+position = "0,10"
 output_name = "DP-2"
 focus_policy = "on-demand"
 hide_on_focus_loss = false
 ```
 
-## Absolute Positioning Mode
+## How Configuration Works
 
-The new `anchor = "absolute"` mode provides CSS-like absolute positioning:
+### 1. Configuration Loading
 
-- Origin: Top-left corner is (0,0)
-- Coordinates: Direct pixel/column control
-- No smart transformations
-- Under the hood: Uses `--edge=center` in kitten CLI
+Shine loads `~/.config/shine/shine.toml` and discovers prisms from configured paths.
 
-**Use cases:**
+```go
+// From pkg/config/loader.go
+cfg, err := config.Load("~/.config/shine/shine.toml")
+```
 
-- Precise pixel-perfect positioning
-- Overlays and HUD elements
-- Custom panel arrangements
-- Avoiding anchor-based coordinate transformations
+### 2. Prism Discovery
 
-## Migration from Old Config
+The system searches configured paths for three types of prism configurations:
 
-**Old format:**
+**Type 1: Full Package** (directory with prism.toml and binary)
+```
+~/.config/shine/prisms/weather/
+├── prism.toml
+└── shine-weather
+```
+
+**Type 2: Data Directory** (directory with prism.toml, binary in PATH)
+```
+~/.config/shine/prisms/weather/
+├── prism.toml
+└── config.json
+
+# Binary: ~/.local/bin/shine-weather
+```
+
+**Type 3: Standalone Configuration** (standalone .toml file, binary in PATH)
+```
+~/.config/shine/prisms/weather.toml
+
+# Binary: ~/.local/bin/shine-weather
+```
+
+### 3. Configuration Merge
+
+If a prism is discovered AND has configuration in shine.toml, the configs are merged:
+
+```go
+// From pkg/config/discovery.go
+merged = MergePrismConfigs(discoveredPrism.Config, userConfig)
+```
+
+**Merge priority:**
+- User settings in shine.toml override prism defaults
+- Metadata ALWAYS comes from prism source (never from shine.toml)
+- `enabled` field is OR'ed (true in either enables the prism)
+
+### 4. Panel Creation
+
+PrismConfig is converted to panel.Config:
+
+```go
+// From pkg/config/types.go
+panelCfg := prismConfig.ToPanelConfig()
+```
+
+This handles:
+- Origin parsing
+- Dimension parsing (int vs "px" strings)
+- Position parsing
+- Focus policy mapping
+- Default values
+
+### 5. Margin Calculation
+
+Margins are calculated automatically from origin, position, and panel size:
+
+```go
+// From pkg/panel/config.go
+top, left, bottom, right, err := config.calculateMargins()
+```
+
+**Users don't set margins directly.** The system computes them based on:
+- Monitor resolution (via hyprctl)
+- Panel dimensions
+- Origin point
+- Position offset
+
+### 6. Kitty Remote Control Launch
+
+Finally, configuration is translated to Kitty remote control arguments:
+
+```go
+// From pkg/panel/config.go
+args := config.ToRemoteControlArgs(binaryPath)
+```
+
+Generates:
+```bash
+kitty @ launch --type=os-panel \
+    --os-panel edge=top \
+    --os-panel columns=1200px \
+    --os-panel lines=30px \
+    --os-panel margin-left=360 \
+    --os-panel margin-top=0 \
+    --os-panel focus-policy=not-allowed \
+    --os-panel output-name=DP-2 \
+    --title shine-bar \
+    /path/to/shine-bar
+```
+
+## Migration from Old Format
+
+If you have old configurations, update them as follows:
+
+### Field Renames
+
+| Old Field | New Field | Notes |
+|-----------|-----------|-------|
+| `edge` | `origin` | Values changed (see origin docs) |
+| `lines` | `height` | Now supports "px" suffix |
+| `columns` | `width` | Now supports "px" suffix |
+| `lines_pixels` | `height = "Npx"` | Merged into height field |
+| `columns_pixels` | `width = "Npx"` | Merged into width field |
+| `margin_*` | (removed) | Margins calculated automatically |
+
+### Old Format Example
 
 ```toml
+[bar]
+enabled = true
 edge = "top"
 lines_pixels = 30
-columns_pixels = 1200
+columns_pixels = 1920
 margin_top = 0
 ```
 
-**New format:**
+### New Format
 
 ```toml
-anchor = "top"
+[prisms.bar]
+enabled = true
+origin = "top-center"
 height = "30px"
-width = "1200px"
+width = "1920px"
 position = "0,0"
-# margins now optional refinements
 ```
-
-## Display Configuration
-
-**CRITICAL:** All panels must specify `output_name = "DP-2"`. Using DP-1 will cause system failure.
-
-**Default:** The system defaults to DP-2 if not specified, but explicit configuration is recommended.
-
-## Translation to Kitten CLI
-
-The configuration system automatically translates to `kitten panel` CLI arguments:
-
-```toml
-anchor = "bottom"
-width = "600px"
-height = "120px"
-position = "100px,50px"
-margin_left = 10
-```
-
-Becomes:
-
-```bash
-kitten panel \
-  --edge=bottom \
-  --columns=600px \
-  --lines=120px \
-  --margin-left=110 \
-  --margin-bottom=50 \
-  --output-name=DP-2 \
-  ...
-```
-
-## Additional Fields
-
-All other configuration fields remain unchanged:
-
-- `focus_policy`: "not-allowed", "exclusive", "on-demand"
-- `hide_on_focus_loss`: boolean
-- `toggle_visibility`: boolean
-- `enabled`: boolean
-
-## Best Practices
-
-1. **Use pixels for precise sizing:** `width = "600px"` rather than `width = 60`
-2. **Choose appropriate anchor:** Use semantic anchors (top-right) over absolute when possible
-3. **Minimal margins:** Use position for base placement, margins for fine-tuning only
-4. **Always specify DP-2:** Never rely on defaults for output_name
-5. **Test positioning:** Verify panel placement after configuration changes
 
 ## Troubleshooting
 
-**Panel not appearing:**
-- Check `enabled = true`
-- Verify `output_name = "DP-2"`
-- Ensure dimensions are reasonable
+### Panel Not Appearing
 
-**Wrong position:**
-- Verify anchor matches intended coordinate system
-- Check position format (comma-separated, no spaces)
-- Review margin refinements
+1. **Check enabled status:**
+   ```toml
+   enabled = true
+   ```
 
-**Size issues:**
-- Confirm px suffix for pixel values
-- Check monitor resolution with `hyprctl monitors`
-- Verify width/height are positive integers
+2. **Verify output name:**
+   ```toml
+   output_name = "DP-2"
+   ```
 
-## Future Enhancements
+3. **Check binary exists:**
+   ```bash
+   which shine-myprism
+   ```
 
-Planned improvements:
+4. **Test configuration loading:**
+   ```bash
+   shine  # Check console output for errors
+   ```
 
-- Percentage-based sizing: `width = "50%"`
-- Named anchors: `anchor = "spotify-panel"`
-- Dynamic positioning: `position = "center-offset"`
-- Multi-monitor spanning: `output_name = ["DP-2", "DP-3"]`
+### Wrong Position
+
+1. **Verify origin matches intent:**
+   - Use semantic origins (top-left, bottom-center) for clarity
+
+2. **Check position format:**
+   ```toml
+   position = "100,50"  # Correct: integers, comma-separated
+   position = "100px,50px"  # WRONG: no px suffix allowed
+   ```
+
+3. **Understand coordinate system for your origin:**
+   - Review coordinate behavior table above
+
+### Size Issues
+
+1. **Confirm pixel values have "px" suffix:**
+   ```toml
+   width = "600px"  # Correct
+   width = 600px    # WRONG: needs quotes
+   ```
+
+2. **Check monitor resolution:**
+   ```bash
+   hyprctl monitors -j | grep -A5 '"name": "DP-2"'
+   ```
+
+3. **Verify dimensions are positive:**
+   ```toml
+   width = 100   # Correct
+   width = 0     # WRONG: will use default (1)
+   ```
+
+## Advanced Topics
+
+### Dynamic Origin Selection
+
+Use different origins for different panel types:
+
+```toml
+# Full-width bar
+[prisms.bar]
+origin = "top-center"
+width = "1920px"
+
+# Corner widget
+[prisms.clock]
+origin = "top-right"
+width = "200px"
+
+# Floating panel
+[prisms.chat]
+origin = "center"
+width = 80
+height = 20
+```
+
+### Multi-Monitor Setup
+
+Target specific monitors by name:
+
+```toml
+[prisms.primary-bar]
+enabled = true
+origin = "top-center"
+output_name = "DP-2"
+
+[prisms.secondary-bar]
+enabled = true
+origin = "top-center"
+output_name = "HDMI-A-1"
+```
+
+### Prism Discovery Paths
+
+Configure custom search paths:
+
+```toml
+[core]
+path = [
+    "~/my-prisms",           # Custom directory
+    "~/.local/share/shine/bin",
+    "/usr/lib/shine/bin",
+]
+```
+
+### Conditional Enabling
+
+Enable prisms based on environment or use case:
+
+```toml
+# Development setup
+[prisms.debug-panel]
+enabled = true
+
+# Production setup
+# [prisms.debug-panel]
+# enabled = false
+```
+
+## Best Practices
+
+1. **Use pixels for precise sizing:**
+   ```toml
+   width = "600px"  # Preferred
+   width = 60       # Only for relative sizing
+   ```
+
+2. **Choose semantic origins:**
+   ```toml
+   origin = "top-right"    # Clear intent
+   origin = "center"       # Less clear without context
+   ```
+
+3. **Always specify DP-2:**
+   ```toml
+   output_name = "DP-2"  # Explicit is better
+   ```
+
+4. **Test positioning incrementally:**
+   ```toml
+   position = "0,0"    # Start here
+   position = "10,0"   # Adjust as needed
+   ```
+
+5. **Use appropriate focus policies:**
+   ```toml
+   focus_policy = "not-allowed"  # Status displays
+   focus_policy = "on-demand"    # Interactive widgets
+   ```
+
+## See Also
+
+- [Prism Developer Guide](PRISM_DEVELOPER_GUIDE.md) - Creating custom prisms
+- [README.md](../README.md) - General Shine documentation
+- [pkg/config/types.go](../pkg/config/types.go) - Configuration structure source
+- [pkg/panel/config.go](../pkg/panel/config.go) - Panel configuration implementation
