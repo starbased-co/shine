@@ -114,17 +114,17 @@ output_name = "DP-2"
 
 ### Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | bool | `false` | Enable/disable prism |
-| `origin` | string | `"center"` | Anchor point: `top-left`, `top-center`, `top-right`, `left-center`, `center`, `right-center`, `bottom-left`, `bottom-center`, `bottom-right` |
-| `width` | int or string | `1` | Width in columns (int) or pixels (string with "px") |
-| `height` | int or string | `1` | Height in lines (int) or pixels (string with "px") |
-| `position` | string | `"0,0"` | Offset from origin as "x,y" in pixels |
-| `hide_on_focus_loss` | bool | `false` | Hide panel when it loses focus |
-| `focus_policy` | string | `"not-allowed"` | Focus policy: `not-allowed`, `exclusive`, `on-demand` |
-| `output_name` | string | `"DP-2"` | Target monitor name |
-| `path` | string | `""` | Custom binary name or path (defaults to `shine-{name}`) |
+| Option               | Type          | Default         | Description                                                                                                                                  |
+| -------------------- | ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`            | bool          | `false`         | Enable/disable prism                                                                                                                         |
+| `origin`             | string        | `"center"`      | Anchor point: `top-left`, `top-center`, `top-right`, `left-center`, `center`, `right-center`, `bottom-left`, `bottom-center`, `bottom-right` |
+| `width`              | int or string | `1`             | Width in columns (int) or pixels (string with "px")                                                                                          |
+| `height`             | int or string | `1`             | Height in lines (int) or pixels (string with "px")                                                                                           |
+| `position`           | string        | `"0,0"`         | Offset from origin as "x,y" in pixels                                                                                                        |
+| `hide_on_focus_loss` | bool          | `false`         | Hide panel when it loses focus                                                                                                               |
+| `focus_policy`       | string        | `"not-allowed"` | Focus policy: `not-allowed`, `exclusive`, `on-demand`                                                                                        |
+| `output_name`        | string        | `"DP-2"`        | Target monitor name                                                                                                                          |
+| `path`               | string        | `""`            | Custom binary name or path (defaults to `shine-{name}`)                                                                                      |
 
 See [docs/configuration.md](docs/configuration.md) for complete configuration documentation.
 
@@ -137,6 +137,7 @@ shine
 ```
 
 This will:
+
 1. Load configuration from `~/.config/shine/shine.toml`
 2. Launch all enabled components
 3. Stay running as orchestrator process
@@ -321,6 +322,7 @@ See the [Prism Developer Guide](docs/PRISM_DEVELOPER_GUIDE.md) for complete docu
 ## Roadmap
 
 ### Phase 1 (Complete)
+
 - [x] Chat component with Bubble Tea
 - [x] Panel configuration system
 - [x] Panel manager
@@ -329,6 +331,7 @@ See the [Prism Developer Guide](docs/PRISM_DEVELOPER_GUIDE.md) for complete docu
 - [x] Basic tests
 
 ### Phase 2 (Complete)
+
 - [x] Prism system architecture
 - [x] Prism discovery and management
 - [x] Developer tooling (`shinectl new-prism`)
@@ -336,6 +339,7 @@ See the [Prism Developer Guide](docs/PRISM_DEVELOPER_GUIDE.md) for complete docu
 - [x] Comprehensive developer guide
 
 ### Phase 3 (Future)
+
 - [ ] Hot reload configuration
 - [ ] IPC event bus for inter-prism communication
 - [ ] Prism marketplace/repository
