@@ -59,8 +59,11 @@ func newIPCServer(component string, supervisor *supervisor) (*ipcServer, error) 
 		return nil, fmt.Errorf("failed to create runtime directory: %w", err)
 	}
 
+	// Extract basename from component path (handles "./test/fixtures/test-prism" -> "test-prism")
+	componentName := filepath.Base(component)
+
 	// Socket path with PID to prevent conflicts on restart
-	socketPath := filepath.Join(runtimeDir, fmt.Sprintf("prism-%s.%d.sock", component, os.Getpid()))
+	socketPath := filepath.Join(runtimeDir, fmt.Sprintf("prism-%s.%d.sock", componentName, os.Getpid()))
 
 	// Remove stale socket if exists
 	_ = os.Remove(socketPath)

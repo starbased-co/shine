@@ -39,7 +39,12 @@ func (sh *signalHandler) run() {
 		switch sig {
 		case unix.SIGCHLD:
 			sh.handleSIGCHLD()
-		case unix.SIGTERM, unix.SIGINT, unix.SIGHUP:
+		case unix.SIGINT:
+			// Ctrl+C: kill foreground prism if exists, otherwise shutdown
+			if sh.handleSIGINT() {
+				return // Shutdown requested
+			}
+		case unix.SIGTERM, unix.SIGHUP:
 			sh.handleShutdown(sig)
 			return
 		case unix.SIGWINCH:
@@ -73,15 +78,44 @@ func (sh *signalHandler) handleSIGCHLD() {
 	}
 }
 
+// handleSIGINT handles Ctrl+C intelligently
+// Returns true if prismctl should shutdown (exit signal loop)
+func (sh *signalHandler) handleSIGINT() bool {
+	sh.supervisor.mu.Lock()
+	hasForeground := len(sh.supervisor.prismList) > 0
+	var foregroundName string
+	if hasForeground {
+		foregroundName = sh.supervisor.prismList[0].name
+	}
+	sh.supervisor.mu.Unlock()
+
+	if hasForeground {
+		// Kill foreground prism only
+		log.Printf("Ctrl+C: killing foreground prism: %s", foregroundName)
+		if err := sh.supervisor.killPrism(foregroundName); err != nil {
+			log.Printf("Failed to kill foreground prism: %v", err)
+		}
+
+		// Note: killPrism is async - handleChildExit will clean up
+		// User can press Ctrl+C again to exit if no more prisms
+		return false // Keep running, let signal loop process SIGCHLD
+	} else {
+		// No prisms running, shutdown prismctl
+		log.Printf("Ctrl+C: no prisms running, shutting down")
+		sh.handleShutdown(unix.SIGINT)
+		return true // Exit signal loop
+	}
+}
+
 // handleShutdown performs graceful shutdown
 func (sh *signalHandler) handleShutdown(sig os.Signal) {
 	log.Printf("Received %s, shutting down gracefully", sig)
 	sh.supervisor.shutdown()
 }
 
-// handleSIGWINCH forwards window resize to child process
+// handleSIGWINCH forwards window resize to ALL child processes
 func (sh *signalHandler) handleSIGWINCH() {
-	sh.supervisor.forwardResize()
+	sh.supervisor.propagateResize()
 }
 
 // stop stops signal handling

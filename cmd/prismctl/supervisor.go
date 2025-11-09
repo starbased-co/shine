@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -16,23 +18,28 @@ type prismState int
 
 const (
 	prismForeground prismState = iota // Currently visible
-	prismBackground                    // Suspended (SIGSTOP)
+	prismBackground                   // Running in background
 )
 
 // prismInstance represents a single prism process
 type prismInstance struct {
-	name  string
-	pid   int
-	state prismState
+	name      string
+	pid       int
+	state     prismState
+	ptyMaster *os.File // Child's PTY master FD
 }
 
 // supervisor manages the lifecycle of child prism processes
 type supervisor struct {
-	mu          sync.Mutex
-	termState   *terminalState
-	prismList   []prismInstance // MRU list: [0] = foreground, [1] = most recent background, etc.
-	shutdownCh  chan struct{}
-	childExitCh chan childExit
+	mu           sync.Mutex
+	termState    *terminalState
+	prismList    []prismInstance // MRU list: [0] = foreground, [1] = most recent background, etc.
+	shutdownCh   chan struct{}
+	childExitCh  chan childExit
+	relay        *relayState // Current active relay (Real PTY ↔ foreground child PTY)
+	relayCtx     context.Context
+	relayCancel  context.CancelFunc
+	shuttingDown bool // Flag to prevent double-shutdown
 }
 
 // childExit represents a child process exit event
@@ -43,11 +50,15 @@ type childExit struct {
 
 // newSupervisor creates a new supervisor instance
 func newSupervisor(termState *terminalState) *supervisor {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &supervisor{
 		termState:   termState,
 		prismList:   make([]prismInstance, 0),
 		shutdownCh:  make(chan struct{}),
 		childExitCh: make(chan childExit, 1),
+		relay:       nil,
+		relayCtx:    ctx,
+		relayCancel: cancel,
 	}
 }
 
@@ -97,14 +108,23 @@ func (s *supervisor) launchAndForeground(prismName string) error {
 
 	log.Printf("Launching new prism: %s (resolved to %s)", prismName, binaryPath)
 
-	// Suspend current foreground if exists
+	// Move current foreground to background if exists
 	if len(s.prismList) > 0 {
-		foregroundPid := s.prismList[0].pid
-		log.Printf("Suspending current foreground (PID %d)", foregroundPid)
-		if err := unix.Kill(foregroundPid, unix.SIGSTOP); err != nil {
-			log.Printf("Warning: failed to suspend foreground: %v", err)
-		}
+		log.Printf("Moving current foreground to background (PID %d)", s.prismList[0].pid)
 		s.prismList[0].state = prismBackground
+	}
+
+	// Allocate PTY pair for new prism
+	ptyMaster, ptySlave, err := allocatePTY()
+	if err != nil {
+		return fmt.Errorf("failed to allocate PTY: %w", err)
+	}
+
+	// Sync terminal size from real terminal to child PTY
+	if err := syncTerminalSize(int(os.Stdin.Fd()), int(ptyMaster.Fd())); err != nil {
+		closePTY(ptyMaster)
+		ptySlave.Close()
+		return fmt.Errorf("failed to sync terminal size: %w", err)
 	}
 
 	// Reset terminal state (CRITICAL!)
@@ -116,42 +136,54 @@ func (s *supervisor) launchAndForeground(prismName string) error {
 	// Stabilization delay
 	time.Sleep(10 * time.Millisecond)
 
-	// Fork/exec new prism
+	// Fork/exec new prism with PTY as controlling terminal
 	cmd := exec.Command(binaryPath)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = ptySlave
+	cmd.Stdout = ptySlave
+	cmd.Stderr = ptySlave
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid:  true, // Create new session
+		Setctty: true, // Make PTY controlling terminal
+		Ctty:    0,    // FD 0 (stdin) in child process
+	}
 
 	if err := cmd.Start(); err != nil {
+		closePTY(ptyMaster)
+		ptySlave.Close()
 		return fmt.Errorf("failed to start prism: %w", err)
 	}
 
+	// Close slave in parent - child keeps it open
+	ptySlave.Close()
+
 	pid := cmd.Process.Pid
-	log.Printf("Prism started: %s (PID %d)", prismName, pid)
+	log.Printf("Prism started: %s (PID %d) with PTY", prismName, pid)
 
 	// Add to front of MRU list
 	newInstance := prismInstance{
-		name:  prismName,
-		pid:   pid,
-		state: prismForeground,
+		name:      prismName,
+		pid:       pid,
+		state:     prismForeground,
+		ptyMaster: ptyMaster,
 	}
 	s.prismList = append([]prismInstance{newInstance}, s.prismList...)
+
+	// Start relay to new foreground prism
+	if err := s.startRelayToForeground(); err != nil {
+		log.Printf("Warning: failed to start relay: %v", err)
+	}
 
 	return nil
 }
 
-// resumeToForeground resumes a background prism to foreground
+// resumeToForeground brings a background prism to foreground
 func (s *supervisor) resumeToForeground(targetIdx int) error {
 	target := s.prismList[targetIdx]
-	log.Printf("Resuming prism %s (PID %d) from background", target.name, target.pid)
+	log.Printf("Bringing prism %s (PID %d) to foreground", target.name, target.pid)
 
-	// Suspend current foreground
+	// Move current foreground to background
 	if len(s.prismList) > 0 && targetIdx != 0 {
-		foregroundPid := s.prismList[0].pid
-		log.Printf("Suspending current foreground (PID %d)", foregroundPid)
-		if err := unix.Kill(foregroundPid, unix.SIGSTOP); err != nil {
-			log.Printf("Warning: failed to suspend foreground: %v", err)
-		}
+		log.Printf("Moving current foreground to background (PID %d)", s.prismList[0].pid)
 		s.prismList[0].state = prismBackground
 	}
 
@@ -164,15 +196,9 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 	// Stabilization delay
 	time.Sleep(10 * time.Millisecond)
 
-	// Resume target prism with SIGCONT
-	if err := unix.Kill(target.pid, unix.SIGCONT); err != nil {
-		return fmt.Errorf("failed to resume prism: %w", err)
-	}
-
-	// Send SIGWINCH to trigger full redraw after resume
-	// No delay needed - kernel queues signals properly
-	if err := unix.Kill(target.pid, unix.SIGWINCH); err != nil {
-		log.Printf("Warning: failed to send SIGWINCH for redraw: %v", err)
+	// Sync terminal size to target PTY
+	if err := syncTerminalSize(int(os.Stdin.Fd()), int(target.ptyMaster.Fd())); err != nil {
+		log.Printf("Warning: failed to sync terminal size: %v", err)
 	}
 
 	// Move target to position [0] and reorder MRU list
@@ -183,7 +209,17 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 	target.state = prismForeground
 	s.prismList = append([]prismInstance{target}, s.prismList...)
 
-	log.Printf("Prism %s resumed to foreground", target.name)
+	log.Printf("Prism %s brought to foreground", target.name)
+
+	// Hot-swap relay to new foreground prism (includes screen clear)
+	if err := s.swapRelay(); err != nil {
+		log.Printf("Warning: failed to swap relay: %v", err)
+	}
+
+	// Send SIGWINCH after relay is connected to trigger redraw
+	if err := unix.Kill(target.pid, unix.SIGWINCH); err != nil {
+		log.Printf("Warning: failed to send SIGWINCH for redraw: %v", err)
+	}
 
 	return nil
 }
@@ -203,66 +239,13 @@ func (s *supervisor) killPrism(prismName string) error {
 
 	log.Printf("Killing prism %s (PID %d)", prismName, pid)
 
-	// Send SIGTERM
+	// Send SIGTERM - handleChildExit will do cleanup when SIGCHLD arrives
 	if err := unix.Kill(pid, unix.SIGTERM); err != nil {
-		log.Printf("Warning: failed to send SIGTERM: %v", err)
+		return fmt.Errorf("failed to send SIGTERM: %w", err)
 	}
 
-	// Wait for clean exit with timeout (release mutex to avoid deadlock)
-	s.mu.Unlock()
-
-	exitCh := make(chan bool, 1)
-	go func() {
-		select {
-		case <-s.childExitCh:
-			exitCh <- true
-		case <-time.After(5 * time.Second):
-			exitCh <- false
-		}
-	}()
-
-	cleanExit := <-exitCh
-
-	// Re-acquire mutex
-	s.mu.Lock()
-
-	if !cleanExit {
-		// Timeout - force kill
-		log.Printf("Timeout waiting for clean exit, sending SIGKILL to PID %d", pid)
-		if err := unix.Kill(pid, unix.SIGKILL); err != nil {
-			log.Printf("Warning: failed to send SIGKILL: %v", err)
-		}
-		// Wait for SIGCHLD after SIGKILL
-		s.mu.Unlock()
-		<-s.childExitCh
-		s.mu.Lock()
-	}
-
-	log.Printf("Prism %s terminated", prismName)
-
-	// Remove from MRU list
-	s.prismList = append(s.prismList[:targetIdx], s.prismList[targetIdx+1:]...)
-
-	// If we killed foreground AND others exist, auto-resume next
-	if targetIdx == 0 && len(s.prismList) > 0 {
-		s.termState.resetTerminalState()
-		time.Sleep(10 * time.Millisecond)
-
-		nextPid := s.prismList[0].pid
-		nextName := s.prismList[0].name
-
-		if err := unix.Kill(nextPid, unix.SIGCONT); err != nil {
-			log.Printf("Warning: failed to resume next prism: %v", err)
-		}
-
-		// Send SIGWINCH to trigger redraw
-		unix.Kill(nextPid, unix.SIGWINCH)
-
-		s.prismList[0].state = prismForeground
-
-		log.Printf("Auto-resumed: %s (PID %d)", nextName, nextPid)
-	}
-
+	// Don't wait for exit - that blocks the signal handler!
+	// handleChildExit will clean up when SIGCHLD arrives
 	return nil
 }
 
@@ -285,17 +268,30 @@ func (s *supervisor) handleChildExit(pid, exitCode int) {
 		return
 	}
 
-	exitedName := s.prismList[exitedIdx].name
-	log.Printf("Child exited: %s (PID %d, code %d)", exitedName, pid, exitCode)
+	exited := s.prismList[exitedIdx]
+	log.Printf("Child exited: %s (PID %d, code %d)", exited.name, pid, exitCode)
+
+	// Close PTY master
+	if err := closePTY(exited.ptyMaster); err != nil {
+		log.Printf("Warning: failed to close PTY master: %v", err)
+	}
 
 	// Notify any waiting kill operation
 	select {
 	case s.childExitCh <- childExit{pid: pid, exitCode: exitCode}:
+		log.Printf("Sent exit event to childExitCh for PID %d", pid)
 	default:
+		log.Printf("WARNING: Failed to send exit event - channel full or no listener for PID %d", pid)
 	}
 
-	// If foreground exited, reset terminal state
+	// If foreground exited, clean up relay and reset terminal state
 	if exitedIdx == 0 {
+		// Stop relay after foreground exit
+		if s.relay != nil {
+			stopRelay(s.relay)
+			s.relay = nil
+		}
+
 		if err := s.termState.resetTerminalState(); err != nil {
 			log.Printf("Error resetting terminal state after child exit: %v", err)
 		}
@@ -304,36 +300,62 @@ func (s *supervisor) handleChildExit(pid, exitCode int) {
 	// Remove from MRU list
 	s.prismList = append(s.prismList[:exitedIdx], s.prismList[exitedIdx+1:]...)
 
-	// If foreground crashed AND others exist, auto-resume next
+	// Check if prismList is now empty - auto-shutdown
+	if len(s.prismList) == 0 {
+		log.Printf("Last prism exited, initiating shutdown")
+		go s.shutdown() // Async to avoid deadlock with mutex
+		return
+	}
+
+	// If foreground crashed AND others exist, bring next to foreground
 	if exitedIdx == 0 && len(s.prismList) > 0 {
 		time.Sleep(10 * time.Millisecond)
 
-		nextPid := s.prismList[0].pid
-		nextName := s.prismList[0].name
+		next := s.prismList[0]
 
-		if err := unix.Kill(nextPid, unix.SIGCONT); err != nil {
-			log.Printf("Warning: failed to resume next prism after crash: %v", err)
+		// Sync terminal size to next prism
+		if err := syncTerminalSize(int(os.Stdin.Fd()), int(next.ptyMaster.Fd())); err != nil {
+			log.Printf("Warning: failed to sync terminal size: %v", err)
 		}
 
 		// Send SIGWINCH to trigger redraw
-		unix.Kill(nextPid, unix.SIGWINCH)
+		unix.Kill(next.pid, unix.SIGWINCH)
 
 		s.prismList[0].state = prismForeground
 
-		log.Printf("Auto-resumed after crash: %s (PID %d)", nextName, nextPid)
+		log.Printf("Auto-brought to foreground after crash: %s (PID %d)", next.name, next.pid)
 	}
 }
 
-// forwardResize forwards SIGWINCH to the foreground process
-func (s *supervisor) forwardResize() {
+// propagateResize propagates SIGWINCH to ALL child PTYs (not just foreground)
+func (s *supervisor) propagateResize() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Forward only to foreground prism (position [0])
-	if len(s.prismList) > 0 {
-		pid := s.prismList[0].pid
-		if err := unix.Kill(pid, unix.SIGWINCH); err != nil {
-			log.Printf("Warning: failed to forward SIGWINCH to PID %d: %v", pid, err)
+	if len(s.prismList) == 0 {
+		return
+	}
+
+	// Get current terminal size from Real PTY
+	realWinsize, err := unix.IoctlGetWinsize(int(os.Stdin.Fd()), unix.TIOCGWINSZ)
+	if err != nil {
+		log.Printf("Warning: failed to get Real PTY size: %v", err)
+		return
+	}
+
+	log.Printf("Propagating resize to %d prisms: %dx%d", len(s.prismList), realWinsize.Col, realWinsize.Row)
+
+	// Sync terminal size to ALL child PTYs and send SIGWINCH
+	for _, prism := range s.prismList {
+		// Sync terminal size to child PTY
+		if err := unix.IoctlSetWinsize(int(prism.ptyMaster.Fd()), unix.TIOCSWINSZ, realWinsize); err != nil {
+			log.Printf("Warning: failed to sync size to %s (PID %d): %v", prism.name, prism.pid, err)
+			continue
+		}
+
+		// Send SIGWINCH to child process
+		if err := unix.Kill(prism.pid, unix.SIGWINCH); err != nil {
+			log.Printf("Warning: failed to send SIGWINCH to %s (PID %d): %v", prism.name, prism.pid, err)
 		}
 	}
 }
@@ -343,7 +365,25 @@ func (s *supervisor) shutdown() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Idempotency: prevent double-shutdown
+	if s.shuttingDown {
+		log.Printf("Shutdown already in progress, ignoring")
+		return
+	}
+	s.shuttingDown = true
+
 	log.Printf("Supervisor shutdown initiated")
+
+	// Stop relay during shutdown
+	if s.relay != nil {
+		stopRelay(s.relay)
+		s.relay = nil
+	}
+
+	// Cancel relay context
+	if s.relayCancel != nil {
+		s.relayCancel()
+	}
 
 	// Signal shutdown
 	close(s.shutdownCh)
@@ -361,10 +401,15 @@ func (s *supervisor) shutdown() {
 	// Wait briefly for graceful exits (match Kitty's signal delivery timing)
 	time.Sleep(20 * time.Millisecond)
 
-	// Force kill any remaining prisms
+	// Force kill any remaining prisms and close PTYs
 	for _, prism := range s.prismList {
 		if err := unix.Kill(prism.pid, unix.SIGKILL); err == nil {
 			log.Printf("Sent SIGKILL to %s (PID %d)", prism.name, prism.pid)
+		}
+
+		// Close PTY master
+		if err := closePTY(prism.ptyMaster); err != nil {
+			log.Printf("Warning: failed to close PTY master for %s: %v", prism.name, err)
 		}
 	}
 
@@ -374,14 +419,76 @@ func (s *supervisor) shutdown() {
 	}
 
 	log.Printf("Supervisor shutdown complete")
+
+	// Print friendly goodbye to user
+	fmt.Println("[ ] Exiting... ")
 }
 
 // isShuttingDown checks if shutdown is in progress
 func (s *supervisor) isShuttingDown() bool {
-	select {
-	case <-s.shutdownCh:
-		return true
-	default:
-		return false
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shuttingDown
+}
+
+// startRelayToForeground starts relay to current foreground prism
+func (s *supervisor) startRelayToForeground() error {
+	if len(s.prismList) == 0 {
+		return fmt.Errorf("no prisms to relay to")
 	}
+
+	foreground := s.prismList[0]
+	if foreground.state != prismForeground {
+		return fmt.Errorf("internal error: position [0] not foreground")
+	}
+
+	// Stop existing relay if running
+	if s.relay != nil {
+		// Force the relay to stop by closing the read side
+		// This makes io.Copy return immediately
+		stopRelay(s.relay)
+		s.relay = nil
+		log.Printf("Stopped previous relay before starting new one")
+	}
+
+	// Start new relay: os.Stdin (Real PTY slave) ↔ foreground.ptyMaster
+	relay, err := startRelay(s.relayCtx, os.Stdin, foreground.ptyMaster)
+	if err != nil {
+		return fmt.Errorf("failed to start relay: %w", err)
+	}
+
+	s.relay = relay
+	log.Printf("Relay started to foreground prism: %s (PID %d)", foreground.name, foreground.pid)
+
+	return nil
+}
+
+// swapRelay stops current relay and starts new one to foreground
+func (s *supervisor) swapRelay() error {
+	startTime := time.Now()
+
+	// Stop current relay
+	if s.relay != nil {
+		stopRelay(s.relay)
+		s.relay = nil
+	}
+
+	// Clear screen AFTER stopping old relay but BEFORE starting new one
+	// This ensures no race between clear and buffered output from background prism
+	// CSI 2 J = clear screen, CSI H = cursor home, CSI 0 m = reset all attributes
+	os.Stdout.WriteString("\x1b[2J\x1b[H\x1b[0m")
+
+	// Start new relay to foreground
+	if err := s.startRelayToForeground(); err != nil {
+		return err
+	}
+
+	swapLatency := time.Since(startTime)
+	log.Printf("Relay swap completed in %v", swapLatency)
+
+	if swapLatency > 50*time.Millisecond {
+		log.Printf("Warning: swap latency exceeded 50ms target: %v", swapLatency)
+	}
+
+	return nil
 }

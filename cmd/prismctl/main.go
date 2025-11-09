@@ -4,7 +4,31 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 )
+
+// setupLogging configures logging to file instead of stderr
+func setupLogging() error {
+	// Create log directory
+	logDir := filepath.Join(os.Getenv("HOME"), ".local", "share", "shine", "logs")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	// Open log file (append mode)
+	logPath := filepath.Join(logDir, "prismctl.log")
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+
+	// Set log output to file
+	log.SetOutput(logFile)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	log.SetPrefix("[prismctl] ")
+
+	return nil
+}
 
 const usage = `prismctl - Supervisor for Shine prism processes
 
@@ -40,9 +64,11 @@ For more information, see the Shine documentation.
 `
 
 func main() {
-	// Setup logging
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	log.SetPrefix("[prismctl] ")
+	// Setup logging to file
+	if err := setupLogging(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to setup logging: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Parse arguments
 	if len(os.Args) < 2 {
