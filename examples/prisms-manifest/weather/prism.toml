@@ -4,7 +4,7 @@
 [prism]
 name = "weather"
 version = "1.0.0"
-path = "shine-weather"
+path = "weather"
 
 [metadata]
 description = "Weather widget with icons and auto-refresh"

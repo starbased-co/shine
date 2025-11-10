@@ -21,7 +21,7 @@ shinectl (service manager)
   ↓ spawns panels via Kitty remote control
 prismctl (panel supervisor)
   ↓ manages process lifecycle
-shine-* prisms (Bubble Tea TUIs)
+prisms (Bubble Tea TUIs: bar, chat, clock, sysinfo)
 ```
 
 **shine**: User-facing CLI (`start`, `stop`, `reload`, `status`, `logs`)

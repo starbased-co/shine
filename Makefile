@@ -16,10 +16,10 @@ prisms:
 	@echo "Building example prisms..."
 	@go build -o bin/shine ./cmd/shine
 	@go build -o bin/shinectl ./cmd/shinectl
-	@go build -o bin/shine-clock ./cmd/shine-clock
-	@go build -o bin/shine-chat ./cmd/shine-chat
-	@go build -o bin/shine-bar ./cmd/shine-bar
-	@go build -o bin/shine-sysinfo ./cmd/shine-sysinfo
+	@go build -o bin/clock ./cmd/prisms/clock
+	@go build -o bin/chat ./cmd/prisms/chat
+	@go build -o bin/bar ./cmd/prisms/bar
+	@go build -o bin/sysinfo ./cmd/prisms/sysinfo
 
 # Build test fixture prism
 test-prism:
@@ -43,7 +43,7 @@ test-all: test test-integration
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -f bin/prismctl bin/shine bin/shinectl
-	@rm -f bin/shine-*
+	@rm -f bin/clock bin/chat bin/bar bin/sysinfo
 	@rm -f test/fixtures/test-prism
 
 # Quick test - builds binaries and shows how to run
@@ -63,7 +63,12 @@ install: build
 	@echo "Installing to ~/.local/bin..."
 	@mkdir -p ~/.local/bin
 	@cp bin/prismctl ~/.local/bin/
-	@cp bin/shine* ~/.local/bin/
+	@cp bin/shine ~/.local/bin/
+	@cp bin/shinectl ~/.local/bin/
+	@cp bin/clock ~/.local/bin/
+	@cp bin/chat ~/.local/bin/
+	@cp bin/bar ~/.local/bin/
+	@cp bin/sysinfo ~/.local/bin/
 	@echo "Done! Make sure ~/.local/bin is in your PATH"
 
 # Help

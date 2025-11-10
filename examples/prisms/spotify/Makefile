@@ -1,6 +1,6 @@
 # Makefile for Spotify Prism Example
 
-BINARY_NAME=shine-spotify
+BINARY_NAME=spotify
 INSTALL_DIR=$(HOME)/.local/bin
 
 .PHONY: all build install clean run help

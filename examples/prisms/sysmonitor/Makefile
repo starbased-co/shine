@@ -1,6 +1,6 @@
 # Makefile for System Monitor Prism Example
 
-BINARY_NAME=shine-sysmonitor
+BINARY_NAME=sysmonitor
 INSTALL_DIR=$(HOME)/.local/bin
 
 .PHONY: all build install clean run help

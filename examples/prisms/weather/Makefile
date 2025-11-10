@@ -1,6 +1,6 @@
 # Makefile for Weather Prism Example
 
-BINARY_NAME=shine-weather
+BINARY_NAME=weather
 INSTALL_DIR=$(HOME)/.local/bin
 
 .PHONY: all build install clean run help

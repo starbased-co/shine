@@ -8,23 +8,23 @@
 # 1. Full Package (directory with binary):
 #    ~/.config/shine/prisms/weather/
 #    ├── prism.toml          # This file
-#    ├── shine-weather       # Binary included
+#    ├── weather             # Binary included
 #    └── assets/             # Optional assets
 #
 # 2. Data Directory (directory without binary):
 #    ~/.config/shine/prisms/spotify/
 #    ├── prism.toml          # This file
 #    └── config.json         # Prism-specific data
-#    # Binary "shine-spotify" found via PATH
+#    # Binary "spotify" found via PATH
 #
 # 3. Standalone Config:
 #    ~/.config/shine/prisms/clock.toml  # Just this file
-#    # Binary "shine-clock" found via PATH
+#    # Binary "clock" found via PATH
 
 # === Core Identification ===
 name = "weather"
 version = "1.0.0"
-path = "shine-weather"  # Binary name or path
+path = "weather"  # Binary name or path
 
 # === Runtime Behavior (Defaults - User can override in shine.toml) ===
 enabled = true
@@ -52,9 +52,9 @@ output_name = "DP-2"
 description = "Weather widget with icons and auto-refresh"
 author = "Your Name <email@example.com>"
 license = "MIT"
-homepage = "https://github.com/yourname/shine-weather"
-repository = "https://github.com/yourname/shine-weather"
-documentation = "https://github.com/yourname/shine-weather/blob/main/README.md"
+homepage = "https://github.com/yourname/weather-prism"
+repository = "https://github.com/yourname/weather-prism"
+documentation = "https://github.com/yourname/weather-prism/blob/main/README.md"
 tags = ["weather", "widget", "status-bar"]
 
 # User can override any setting (except metadata) in ~/.config/shine/shine.toml:
