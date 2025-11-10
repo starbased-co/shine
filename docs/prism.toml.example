@@ -1,0 +1,72 @@
+# Shine Prism Configuration
+#
+# This file defines which prisms should be managed by shinectl.
+# Each [[prism]] entry represents a panel that will be spawned in Kitty.
+#
+# Location: ~/.config/shine/prism.toml
+
+# Example: Clock prism - always restart on failure
+[[prism]]
+name = "shine-clock"
+restart = "on-failure"
+restart_delay = "3s"
+max_restarts = 5
+
+# Example: System info prism - restart unless explicitly stopped
+[[prism]]
+name = "shine-sysinfo"
+restart = "unless-stopped"
+restart_delay = "5s"
+max_restarts = 10
+
+# Example: Chat prism - never restart (default)
+[[prism]]
+name = "shine-chat"
+restart = "no"
+
+# Example: Status bar - always restart
+[[prism]]
+name = "shine-bar"
+restart = "always"
+restart_delay = "2s"
+max_restarts = 0  # 0 = unlimited
+
+# Restart Policy Options:
+#
+# - "no" (default)
+#   Never restart the prism. If it crashes or exits, it stays stopped.
+#
+# - "on-failure"
+#   Restart only if the prism exits with a non-zero exit code (crash/error).
+#   Clean exits (exit code 0) will not trigger a restart.
+#
+# - "unless-stopped"
+#   Always restart unless the prism was explicitly stopped via IPC command.
+#   Crashes, kills, and clean exits all trigger restart.
+#
+# - "always"
+#   Restart unconditionally, even if the prism exits cleanly.
+#   Use with caution - can cause restart loops if prism exits immediately.
+#
+# Additional Options:
+#
+# - restart_delay (duration string, default: "1s")
+#   Time to wait before restarting a crashed prism.
+#   Examples: "500ms", "2s", "1m"
+#
+# - max_restarts (integer, default: 0 = unlimited)
+#   Maximum number of restart attempts per hour.
+#   Prevents restart loops from consuming resources.
+#   After exceeding this limit, the prism stays stopped until manually restarted.
+
+# Hot-Reload:
+#
+# To reload this configuration without restarting:
+#   pkill -HUP shinectl
+#   OR
+#   shine reload  (when implemented)
+#
+# Changes will take effect immediately:
+# - New prisms will be spawned
+# - Removed prisms will be stopped
+# - Existing prisms are NOT restarted (state preserved)

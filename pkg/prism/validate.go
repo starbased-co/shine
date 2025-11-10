@@ -1,29 +1,23 @@
 package prism
 
 import (
-	"debug/elf"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-// ValidationResult contains detailed validation information
+// ValidationResult contains validation information
 type ValidationResult struct {
-	Valid        bool
-	Errors       []string
-	Warnings     []string
-	Capabilities []string
+	Valid  bool
+	Errors []string
 }
 
-// Validate performs comprehensive prism binary validation
+// Validate performs basic prism binary validation
 func Validate(binaryPath string) (*ValidationResult, error) {
 	result := &ValidationResult{
-		Valid:        true,
-		Errors:       []string{},
-		Warnings:     []string{},
-		Capabilities: []string{},
+		Valid:  true,
+		Errors: []string{},
 	}
 
 	// Check 1: File exists
@@ -41,62 +35,14 @@ func Validate(binaryPath string) (*ValidationResult, error) {
 		return result, nil
 	}
 
-	// Check 3: Try to detect ELF binary type
-	capabilities, err := detectCapabilities(binaryPath)
-	if err == nil {
-		result.Capabilities = capabilities
-	}
-
-	// Check 4: Try running with --version
-	versionOutput, err := checkVersion(binaryPath)
-	if err == nil && versionOutput != "" {
-		result.Capabilities = append(result.Capabilities, "version-flag")
-	}
-
 	return result, nil
-}
-
-// detectCapabilities attempts to detect binary capabilities
-func detectCapabilities(path string) ([]string, error) {
-	capabilities := []string{}
-
-	f, err := elf.Open(path)
-	if err != nil {
-		return capabilities, err
-	}
-	defer f.Close()
-
-	// Basic ELF info
-	capabilities = append(capabilities, fmt.Sprintf("arch:%s", f.Machine.String()))
-	capabilities = append(capabilities, fmt.Sprintf("type:%s", f.Type.String()))
-
-	// Check if dynamically linked
-	if f.Type == elf.ET_DYN {
-		capabilities = append(capabilities, "dynamic")
-	} else if f.Type == elf.ET_EXEC {
-		capabilities = append(capabilities, "static")
-	}
-
-	return capabilities, nil
-}
-
-// checkVersion tries to run the binary with --version
-func checkVersion(path string) (string, error) {
-	cmd := exec.Command(path, "--version")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
 }
 
 // ValidateManifest validates a prism manifest and its referenced binary
 func ValidateManifest(manifestPath string) (*ValidationResult, error) {
 	result := &ValidationResult{
-		Valid:        true,
-		Errors:       []string{},
-		Warnings:     []string{},
-		Capabilities: []string{},
+		Valid:  true,
+		Errors: []string{},
 	}
 
 	manifest, err := LoadManifest(manifestPath)
@@ -128,8 +74,6 @@ func ValidateManifest(manifestPath string) (*ValidationResult, error) {
 
 	// Merge binary validation results
 	result.Errors = append(result.Errors, binaryResult.Errors...)
-	result.Warnings = append(result.Warnings, binaryResult.Warnings...)
-	result.Capabilities = append(result.Capabilities, binaryResult.Capabilities...)
 	result.Valid = result.Valid && binaryResult.Valid
 
 	return result, nil
