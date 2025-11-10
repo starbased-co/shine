@@ -192,6 +192,7 @@ func TestParseOrigin(t *testing.T) {
 		{"top-right", "top-right", OriginTopRight},
 		{"left-center", "left-center", OriginLeftCenter},
 		{"center", "center", OriginCenter},
+		{"center-sized", "center-sized", OriginCenterSized},
 		{"right-center", "right-center", OriginRightCenter},
 		{"bottom-left", "bottom-left", OriginBottomLeft},
 		{"bottom-center", "bottom-center", OriginBottomCenter},
@@ -219,6 +220,7 @@ func TestOriginString(t *testing.T) {
 		{OriginTopRight, "top-right"},
 		{OriginLeftCenter, "left-center"},
 		{OriginCenter, "center"},
+		{OriginCenterSized, "center-sized"},
 		{OriginRightCenter, "right-center"},
 		{OriginBottomLeft, "bottom-left"},
 		{OriginBottomCenter, "bottom-center"},
@@ -448,4 +450,177 @@ func TestToRemoteControlArgs(t *testing.T) {
 	if args[len(args)-1] != "/usr/bin/component" {
 		t.Errorf("ToRemoteControlArgs() component path should be last, got %v", args)
 	}
+}
+
+func TestOriginCenterSized(t *testing.T) {
+	t.Run("String conversion", func(t *testing.T) {
+		if OriginCenterSized.String() != "center-sized" {
+			t.Errorf("Expected 'center-sized', got '%s'", OriginCenterSized.String())
+		}
+	})
+
+	t.Run("Parse from string", func(t *testing.T) {
+		origin := ParseOrigin("center-sized")
+		if origin != OriginCenterSized {
+			t.Errorf("Expected OriginCenterSized, got %v", origin)
+		}
+	})
+
+	t.Run("originToEdge", func(t *testing.T) {
+		cfg := &Config{Origin: OriginCenterSized}
+		edge := cfg.originToEdge()
+		if edge != "center-sized" {
+			t.Errorf("Expected 'center-sized', got '%s'", edge)
+		}
+	})
+
+	t.Run("calculateMargins returns zero", func(t *testing.T) {
+		cfg := &Config{
+			Origin:     OriginCenterSized,
+			Width:      Dimension{Value: 400, IsPixels: true},
+			Height:     Dimension{Value: 300, IsPixels: true},
+			OutputName: "DP-2",
+		}
+
+		top, left, bottom, right, err := cfg.calculateMargins()
+		if err != nil {
+			t.Fatalf("calculateMargins failed: %v", err)
+		}
+
+		if top != 0 || left != 0 || bottom != 0 || right != 0 {
+			t.Errorf("Expected all margins to be 0, got top=%d, left=%d, bottom=%d, right=%d",
+				top, left, bottom, right)
+		}
+	})
+
+	t.Run("ToRemoteControlArgs omits margin args", func(t *testing.T) {
+		cfg := &Config{
+			Origin:     OriginCenterSized,
+			Width:      Dimension{Value: 400, IsPixels: true},
+			Height:     Dimension{Value: 300, IsPixels: true},
+			OutputName: "DP-2",
+		}
+
+		args := cfg.ToRemoteControlArgs("/usr/bin/prism")
+
+		hasEdge := false
+		for _, arg := range args {
+			if arg == "edge=center-sized" {
+				hasEdge = true
+			}
+			if len(arg) >= 7 && arg[:7] == "margin-" {
+				t.Errorf("Unexpected margin arg in center-sized: %s", arg)
+			}
+		}
+		if !hasEdge {
+			t.Errorf("Expected 'edge=center-sized' in args: %v", args)
+		}
+	})
+}
+
+func TestOriginCenterFourMargins(t *testing.T) {
+	t.Run("calculateMargins without offset", func(t *testing.T) {
+		cfg := &Config{
+			Origin:     OriginCenter,
+			Width:      Dimension{Value: 400, IsPixels: true},
+			Height:     Dimension{Value: 300, IsPixels: true},
+			Position:   Position{X: 0, Y: 0},
+			OutputName: "DP-2",
+		}
+
+		top, left, bottom, right, err := cfg.calculateMargins()
+		if err != nil {
+			t.Fatalf("calculateMargins failed: %v", err)
+		}
+
+		if top == 0 || left == 0 || bottom == 0 || right == 0 {
+			t.Errorf("Expected all margins to be non-zero, got top=%d, left=%d, bottom=%d, right=%d",
+				top, left, bottom, right)
+		}
+
+		if top != bottom {
+			t.Errorf("Expected top == bottom, got top=%d, bottom=%d", top, bottom)
+		}
+		if left != right {
+			t.Errorf("Expected left == right, got left=%d, right=%d", left, right)
+		}
+	})
+
+	t.Run("calculateMargins with offset", func(t *testing.T) {
+		cfg := &Config{
+			Origin:     OriginCenter,
+			Width:      Dimension{Value: 400, IsPixels: true},
+			Height:     Dimension{Value: 300, IsPixels: true},
+			Position:   Position{X: 50, Y: 100},
+			OutputName: "DP-2",
+		}
+
+		top, left, bottom, right, err := cfg.calculateMargins()
+		if err != nil {
+			t.Fatalf("calculateMargins failed: %v", err)
+		}
+
+		if top == 0 || left == 0 || bottom == 0 || right == 0 {
+			t.Errorf("Expected all margins to be non-zero, got top=%d, left=%d, bottom=%d, right=%d",
+				top, left, bottom, right)
+		}
+
+		if top == bottom {
+			t.Errorf("Expected top != bottom with offset, got top=%d, bottom=%d", top, bottom)
+		}
+		if left == right {
+			t.Errorf("Expected left != right with offset, got left=%d, right=%d", left, right)
+		}
+
+		if left <= right {
+			t.Errorf("Expected left > right (offsetX=50), got left=%d, right=%d", left, right)
+		}
+		if top <= bottom {
+			t.Errorf("Expected top > bottom (offsetY=100), got top=%d, bottom=%d", top, bottom)
+		}
+	})
+
+	t.Run("ToRemoteControlArgs includes all four margins", func(t *testing.T) {
+		cfg := &Config{
+			Origin:     OriginCenter,
+			Width:      Dimension{Value: 400, IsPixels: true},
+			Height:     Dimension{Value: 300, IsPixels: true},
+			Position:   Position{X: 0, Y: 0},
+			OutputName: "DP-2",
+		}
+
+		args := cfg.ToRemoteControlArgs("/usr/bin/prism")
+
+		hasEdge := false
+		hasTop := false
+		hasLeft := false
+		hasBottom := false
+		hasRight := false
+
+		for _, arg := range args {
+			if arg == "edge=center" {
+				hasEdge = true
+			}
+			if len(arg) >= 11 && arg[:11] == "margin-top=" {
+				hasTop = true
+			}
+			if len(arg) >= 12 && arg[:12] == "margin-left=" {
+				hasLeft = true
+			}
+			if len(arg) >= 14 && arg[:14] == "margin-bottom=" {
+				hasBottom = true
+			}
+			if len(arg) >= 13 && arg[:13] == "margin-right=" {
+				hasRight = true
+			}
+		}
+
+		if !hasEdge {
+			t.Errorf("Expected 'edge=center' in args")
+		}
+		if !hasTop || !hasLeft || !hasBottom || !hasRight {
+			t.Errorf("Missing margin args: top=%v, left=%v, bottom=%v, right=%v",
+				hasTop, hasLeft, hasBottom, hasRight)
+		}
+	})
 }

@@ -69,24 +69,46 @@ output_name = "DP-2"
 [prisms.clock]
 # Clock widget - top-right corner
 enabled = false
-anchor = "top-right"         # Anchor to top-right corner
+origin = "top-right"         # Origin point: top-right corner
 width = "150px"              # 150 pixels wide
 height = "30px"              # 30 pixels high
-position = "0,0"             # At corner (0,0 relative to anchor)
-margin_right = 0             # No refinement needed
-margin_top = 0
+position = "0,0"             # At corner (0,0 relative to origin)
 focus_policy = "not-allowed"
 output_name = "DP-2"
 
 [prisms.sysinfo]
-# System info widget - absolute positioned
+# System info widget - centered using center-sized (auto-centers)
 enabled = false
-anchor = "absolute"          # Absolute positioning mode
+origin = "center-sized"      # Auto-centers panel, no margin calculations
 width = "200px"              # 200 pixels wide
 height = "100px"             # 100 pixels tall
-position = "10px,40px"       # 10px from left, 40px from top
+# NOTE: position is ignored for center-sized origin
 focus_policy = "not-allowed"
 output_name = "DP-2"
+
+# Example: Centered panel with position offset
+# [prisms.notification]
+# enabled = false
+# origin = "center"           # Centers panel with support for position offsets
+# width = "400px"             # 400 pixels wide
+# height = "300px"            # 300 pixels tall
+# position = "50,100"         # Offset 50px right, 100px down from center
+# focus_policy = "on-demand"
+# output_name = "DP-2"
+#
+# IMPORTANT: Differences between "center" and "center-sized":
+#
+# origin = "center":
+#   - Maps to Kitty edge=center (anchors to ALL four sides)
+#   - Requires ALL four margins to be calculated (top, left, bottom, right)
+#   - Supports position offsets via position = "x,y"
+#   - Use when you need precise control over centering with offsets
+#
+# origin = "center-sized":
+#   - Maps to Kitty edge=center-sized (auto-centers)
+#   - No margin calculations needed
+#   - Position offsets are IGNORED (margins have no effect)
+#   - Simpler, recommended for basic centered panels without offsets
 
 # ============================================================================
 # EXAMPLE PRISMS

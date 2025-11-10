@@ -14,11 +14,11 @@ import (
 type PrismSource int
 
 const (
-	SourceUnknown       PrismSource = iota
-	SourceShineToml                 // From shine.toml [prisms.*]
-	SourcePrismDir                  // From directory with prism.toml
-	SourceStandaloneTOML            // From standalone .toml file in prisms/
-	SourceBinaryOnly                // Binary found but no config
+	SourceUnknown        PrismSource = iota
+	SourceShineToml                  // From shine.toml [prisms.*]
+	SourcePrismDir                   // From directory with prism.toml
+	SourceStandaloneTOML             // From standalone .toml file in prisms/
+	SourceBinaryOnly                 // Binary found but no config
 )
 
 // DiscoveredPrism represents a discovered prism with its source
@@ -162,7 +162,6 @@ func discoverStandalonePrism(baseDir, filename string) (*DiscoveredPrism, error)
 }
 
 // loadPrismConfig loads a PrismConfig from a TOML file
-// This preserves metadata when loading from prism sources
 func loadPrismConfig(path string) (*PrismConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -178,7 +177,6 @@ func loadPrismConfig(path string) (*PrismConfig, error) {
 }
 
 // loadShineConfig loads the main shine.toml configuration
-// Metadata in [prisms.*] sections is ignored during merge (prism source takes priority)
 func loadShineConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(expandPath(path))
 	if err != nil {
@@ -194,7 +192,6 @@ func loadShineConfig(path string) (*Config, error) {
 }
 
 // MergePrismConfigs merges user config from shine.toml over defaults from prism sources
-// Metadata is preserved from prismSource only (never from userConfig)
 func MergePrismConfigs(prismSource, userConfig *PrismConfig) *PrismConfig {
 	merged := &PrismConfig{}
 
@@ -253,7 +250,8 @@ func MergePrismConfigs(prismSource, userConfig *PrismConfig) *PrismConfig {
 		merged.OutputName = userConfig.OutputName
 	}
 
-	// === Metadata (ALWAYS from prism source, NEVER from user config) ===
+	// === Metadata ===
+	// Note: Metadata from user config is intentionally skipped
 	merged.Metadata = prismSource.Metadata
 
 	// === Internal fields ===

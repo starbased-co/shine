@@ -187,22 +187,26 @@ pkg/
 
 The CLI help system uses a **hybrid approach**:
 
-**Markdown Files** (cmd/shine/help/*.md)
+**Markdown Files** (cmd/shine/help/\*.md)
+
 - Long-form content with examples and troubleshooting
 - Embedded at compile-time via `//go:embed`
 - Rendered beautifully with Glamour
 
 **Structured Metadata** (help_metadata.go)
+
 - `CommandHelp` struct with name, category, synopsis, usage, related commands
 - `helpRegistry` map for centralized command metadata
 - Enables programmatic access and multiple output formats
 
 **Multiple Output Formats**
+
 - Human-readable: Glamour-rendered markdown (`shine help start`)
 - Listings: Generated from metadata (`shine help list`, `shine help categories`)
 - Machine-readable: JSON output (`shine help start --json`)
 
 **Use Cases**
+
 - User documentation: Rich terminal help with examples
 - Shell completion: `shine help --json names` provides command list
 - IDE integration: JSON metadata for hover text and autocomplete
@@ -219,7 +223,6 @@ Three ways to configure prisms:
 3. **Standalone** `.toml` files (e.g., `~/.config/shine/prisms/clock.toml`)
 
 User config in `shine.toml` OVERRIDES prism defaults from `prism.toml`.
-Metadata (description, author, license) comes ONLY from prism sources, never shine.toml.
 
 ## Common Development Tasks
 
@@ -301,6 +304,7 @@ shine status
 ### prismctl Timing Constants
 
 **DO NOT MODIFY** these without careful testing (from prismctl implementation):
+
 - 10ms stabilization delay after resume (SIGCONT)
 - 20ms shutdown grace period (SIGTERM → SIGKILL)
 - Terminal state restoration requires exact sequencing
@@ -316,12 +320,14 @@ Example: `/run/user/1000/shine/prism-panel-0.12345.sock`
 ### Restart Policies
 
 From `prism.toml`:
+
 - `restart = "no"` - Never restart (default)
 - `restart = "on-failure"` - Restart only on non-zero exit
 - `restart = "unless-stopped"` - Always restart unless explicitly stopped
 - `restart = "always"` - Restart unconditionally
 
 Additional settings:
+
 - `restart_delay` - Delay before restart (e.g., "5s", "500ms")
 - `max_restarts` - Max restarts per hour (0 = unlimited)
 
@@ -351,6 +357,7 @@ func main() {
 ### Required Prism Interface
 
 Prisms MUST:
+
 1. Be executable binaries in PATH or configured paths
 2. Accept no required CLI arguments (config via files if needed)
 3. Exit cleanly on SIGTERM/SIGINT
@@ -359,6 +366,7 @@ Prisms MUST:
 ### Prism Manifest (prism.toml)
 
 Example:
+
 ```toml
 name = "shine-weather"
 version = "1.0.0"
@@ -386,6 +394,7 @@ license = "MIT"
 JSON messages over Unix sockets:
 
 **Request**:
+
 ```json
 {"action": "start", "prism": "clock"}
 {"action": "kill", "prism": "clock"}
@@ -394,6 +403,7 @@ JSON messages over Unix sockets:
 ```
 
 **Response**:
+
 ```json
 {"success": true, "foreground": "clock", "background": ["chat"]}
 {"success": false, "error": "prism not found"}
@@ -402,6 +412,7 @@ JSON messages over Unix sockets:
 ### Terminal State Management
 
 prismctl preserves terminal state when suspending:
+
 1. Save current terminal attributes (termios)
 2. SIGSTOP to suspend process
 3. On resume: restore attributes, SIGCONT, 10ms stabilization
@@ -424,6 +435,7 @@ prismctl preserves terminal state when suspending:
 ## Known Limitations
 
 From architecture (Phase 4 future work):
+
 - No eviction policy - unlimited suspended prisms
 - No persistence - MRU list lost on prismctl restart
 - No prism tagging (pin/evict)

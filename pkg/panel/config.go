@@ -43,6 +43,7 @@ const (
 	OriginTopRight
 	OriginLeftCenter
 	OriginCenter
+	OriginCenterSized // Auto-centers with no margin calculations
 	OriginRightCenter
 	OriginBottomLeft
 	OriginBottomCenter
@@ -61,6 +62,8 @@ func (o Origin) String() string {
 		return "left-center"
 	case OriginCenter:
 		return "center"
+	case OriginCenterSized:
+		return "center-sized"
 	case OriginRightCenter:
 		return "right-center"
 	case OriginBottomLeft:
@@ -87,6 +90,8 @@ func ParseOrigin(s string) Origin {
 		return OriginLeftCenter
 	case "center":
 		return OriginCenter
+	case "center-sized":
+		return OriginCenterSized
 	case "right-center":
 		return OriginRightCenter
 	case "bottom-left":
@@ -302,6 +307,8 @@ func (c *Config) originToEdge() string {
 		return "right"
 	case OriginCenter:
 		return "center"
+	case OriginCenterSized:
+		return "center-sized"
 	default:
 		return "center"
 	}
@@ -309,6 +316,11 @@ func (c *Config) originToEdge() string {
 
 // calculateMargins computes final margins from origin and position offset
 func (c *Config) calculateMargins() (top, left, bottom, right int, err error) {
+	// center-sized uses auto-centering, no margin calculations needed
+	if c.Origin == OriginCenterSized {
+		return 0, 0, 0, 0, nil
+	}
+
 	// Get monitor dimensions
 	monWidth, monHeight, err := getMonitorResolution(c.OutputName)
 	if err != nil {
@@ -349,8 +361,13 @@ func (c *Config) calculateMargins() (top, left, bottom, right int, err error) {
 		top = (monHeight / 2) - (panelHeight / 2) + offsetY
 
 	case OriginCenter:
+		// CRITICAL: edge=center anchors to ALL sides, so we MUST set all four margins
+		// to properly center and size the panel. Kitty will shrink the panel and place
+		// it using these margin constraints.
 		left = (monWidth / 2) - (panelWidth / 2) + offsetX
 		top = (monHeight / 2) - (panelHeight / 2) + offsetY
+		right = (monWidth / 2) - (panelWidth / 2) - offsetX
+		bottom = (monHeight / 2) - (panelHeight / 2) - offsetY
 
 	case OriginRightCenter:
 		right = offsetX
@@ -369,9 +386,11 @@ func (c *Config) calculateMargins() (top, left, bottom, right int, err error) {
 		bottom = offsetY
 
 	default:
-		// Default to center
+		// Default to center with all four margins
 		left = (monWidth / 2) - (panelWidth / 2) + offsetX
 		top = (monHeight / 2) - (panelHeight / 2) + offsetY
+		right = (monWidth / 2) - (panelWidth / 2) - offsetX
+		bottom = (monHeight / 2) - (panelHeight / 2) - offsetY
 	}
 
 	return top, left, bottom, right, nil
