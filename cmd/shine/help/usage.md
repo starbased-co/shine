@@ -1,78 +1,32 @@
 # shine - Prism TUI Manager
 
-A TUI-based desktop shell toolkit for Hyprland using Kitty panels.
+Manage TUI-based desktop shell panels for Hyprland using Kitty.
 
-## Usage
+## USAGE
+  shine <command> [flags]
 
-```bash
-shine <command> [arguments]
-```
+## CORE COMMANDS
+  start:      Start the shine service and enabled panels
+  stop:       Stop all panels
+  reload:     Reload configuration and update panels
+  status:     Show status of all panels
+  logs:       View service and panel logs
 
-## Commands
+## ADDITIONAL COMMANDS
+  help:       Show help for a command or topic
+  version:    Show version information
 
-- `start` - Start/resume the shine service
-- `stop` - Gracefully stop all panels
-- `reload` - Reload configuration and update panels
-- `status` - Show status of all panels
-- `logs [panel-id]` - View logs (all or specific panel)
-- `help [topic]` - Show detailed help for a command or topic
+## FLAGS
+  --help      Show help for command
+  --version   Show shine version
 
-## Options
+## EXAMPLES
+  $ shine start
+  $ shine status
+  $ shine logs shinectl
+  $ shine help start
 
-- `-h, --help` - Show this help message
-- `-v, --version` - Show version information
-
-## Examples
-
-Start the service:
-```bash
-shine start
-```
-
-View panel status:
-```bash
-shine status
-```
-
-List all log files:
-```bash
-shine logs
-```
-
-View shinectl logs:
-```bash
-shine logs shinectl
-```
-
-Stop all panels:
-```bash
-shine stop
-```
-
-Get detailed help for a command:
-```bash
-shine help start
-shine help status
-```
-
-List all available commands:
-```bash
-shine help list       # Detailed list with descriptions
-shine help topics     # Quick topic overview
-shine help categories # Commands organized by category
-```
-
-## Configuration
-
-- **Config file**: `~/.config/shine/prism.toml`
-- **Log files**: `~/.local/share/shine/logs/`
-
-## Getting Started
-
-1. Configure panels in `~/.config/shine/prism.toml`
-2. Start the service: `shine start`
-3. Check status: `shine status`
-
-## Documentation
-
-For more information, see the documentation at https://github.com/starbased-co/shine
+## LEARN MORE
+  Use `shine help <command>` for more information about a command.
+  Read the manual at https://github.com/starbased-co/shine
+  Config file: ~/.config/shine/prism.toml
