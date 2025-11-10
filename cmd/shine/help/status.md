@@ -5,21 +5,34 @@ Display current state of all panel supervisors and their managed prisms.
 Queries all running prismctl panel supervisors via IPC to show which panel is running, foreground prism (actively displayed), background prisms (suspended), and per-prism state.
 
 ## USAGE
-  shine status
+
+```bash
+shine status
+```
 
 ## FLAGS
-  --help   Show help for command
+
+```
+--help   Show help for command
+```
 
 ## OUTPUT
-  For each panel:
-  - Panel name and IPC socket path
-  - Foreground prism (currently visible, receiving input)
-  - Background prisms (suspended with SIGSTOP, not consuming CPU)
-  - Table with prism name, PID, and state
+
+For each panel:
+- Panel name and IPC socket path
+- Foreground prism (currently visible, receiving input)
+- Background prisms (suspended with SIGSTOP, not consuming CPU)
+- Table with prism name, PID, and state
 
 ## EXAMPLES
-  $ shine status
-  $ shine start && shine status
+
+```bash
+$ shine status
+```
+
+```bash
+$ shine start && shine status
+```
 
 ## LEARN MORE
   Use `shine help start` to start panels.

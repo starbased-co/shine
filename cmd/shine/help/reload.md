@@ -7,32 +7,55 @@ Triggers configuration refresh in the shinectl service manager. Re-reads ~/.conf
 ⚠️  Currently requires manual SIGHUP signal. IPC reload coming soon.
 
 ## USAGE
-  shine reload
+
+```bash
+shine reload
+```
 
 ## FLAGS
-  --help   Show help for command
+
+```
+--help   Show help for command
+```
 
 ## CURRENT WORKAROUND
-  Until IPC reload is implemented:
 
-  $ pkill -HUP shinectl
-  $ shine status  # Verify changes
+Until IPC reload is implemented:
+
+```bash
+$ pkill -HUP shinectl
+```
+
+```bash
+$ shine status  # Verify changes
+```
 
 ## WHAT RELOADS
-  - enabled flag (start/stop prisms)
-  - Panel geometry (origin, width, height)
-  - Restart policies
-  - Prism configuration files
+
+- enabled flag (start/stop prisms)
+- Panel geometry (origin, width, height)
+- Restart policies
+- Prism configuration files
 
 ## WHAT DOES NOT RELOAD
-  - Prism binaries (requires restart)
-  - Environment variables
-  - Core config (config_dir, data_dir, log_level)
+
+- Prism binaries (requires restart)
+- Environment variables
+- Core config (config_dir, data_dir, log_level)
 
 ## EXAMPLES
-  $ vim ~/.config/shine/prism.toml
-  $ pkill -HUP shinectl
-  $ shine status
+
+```bash
+$ vim ~/.config/shine/prism.toml
+```
+
+```bash
+$ pkill -HUP shinectl
+```
+
+```bash
+$ shine status
+```
 
 ## LEARN MORE
   Use `shine help start` to restart if reload fails.

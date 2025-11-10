@@ -7,14 +7,26 @@ Sends shutdown signal to all running prismctl panel supervisors via IPC. Each su
 Note: This stops panels but not the shinectl service manager, which remains running.
 
 ## USAGE
-  shine stop
+
+```bash
+shine stop
+```
 
 ## FLAGS
-  --help   Show help for command
+
+```
+--help   Show help for command
+```
 
 ## EXAMPLES
-  $ shine stop
-  $ shine stop && shine status
+
+```bash
+$ shine stop
+```
+
+```bash
+$ shine stop && shine status
+```
 
 ## LEARN MORE
   Use `shine help start` to restart panels.

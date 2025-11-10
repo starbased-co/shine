@@ -3,28 +3,52 @@
 Manage TUI-based desktop shell panels for Hyprland using Kitty.
 
 ## USAGE
-  shine <command> [flags]
+
+```bash
+shine <command> [flags]
+```
 
 ## CORE COMMANDS
-  start:      Start the shine service and enabled panels
-  stop:       Stop all panels
-  reload:     Reload configuration and update panels
-  status:     Show status of all panels
-  logs:       View service and panel logs
+
+```
+start:      Start the shine service and enabled panels
+stop:       Stop all panels
+reload:     Reload configuration and update panels
+status:     Show status of all panels
+logs:       View service and panel logs
+```
 
 ## ADDITIONAL COMMANDS
-  help:       Show help for a command or topic
-  version:    Show version information
+
+```
+help:       Show help for a command or topic
+version:    Show version information
+```
 
 ## FLAGS
-  --help      Show help for command
-  --version   Show shine version
+
+```
+--help      Show help for command
+--version   Show shine version
+```
 
 ## EXAMPLES
-  $ shine start
-  $ shine status
-  $ shine logs shinectl
-  $ shine help start
+
+```bash
+$ shine start
+```
+
+```bash
+$ shine status
+```
+
+```bash
+$ shine logs shinectl
+```
+
+```bash
+$ shine help start
+```
 
 ## LEARN MORE
   Use `shine help <command>` for more information about a command.
