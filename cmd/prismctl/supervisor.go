@@ -36,9 +36,9 @@ type supervisor struct {
 	prismList    []prismInstance // MRU list: [0] = foreground, [1] = most recent background, etc.
 	shutdownCh   chan struct{}
 	childExitCh  chan childExit
-	relay        *relayState // Current active relay (Real PTY ↔ foreground child PTY)
-	relayCtx     context.Context
-	relayCancel  context.CancelFunc
+	surface       *surfaceState // Current active surface (Real PTY ↔ foreground child PTY)
+	surfaceCtx    context.Context
+	surfaceCancel context.CancelFunc
 	shuttingDown bool // Flag to prevent double-shutdown
 }
 
@@ -52,13 +52,13 @@ type childExit struct {
 func newSupervisor(termState *terminalState) *supervisor {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &supervisor{
-		termState:   termState,
-		prismList:   make([]prismInstance, 0),
-		shutdownCh:  make(chan struct{}),
-		childExitCh: make(chan childExit, 1),
-		relay:       nil,
-		relayCtx:    ctx,
-		relayCancel: cancel,
+		termState:     termState,
+		prismList:     make([]prismInstance, 0),
+		shutdownCh:    make(chan struct{}),
+		childExitCh:   make(chan childExit, 1),
+		surface:       nil,
+		surfaceCtx:    ctx,
+		surfaceCancel: cancel,
 	}
 }
 
@@ -168,9 +168,9 @@ func (s *supervisor) launchAndForeground(prismName string) error {
 	}
 	s.prismList = append([]prismInstance{newInstance}, s.prismList...)
 
-	// Start relay to new foreground prism
-	if err := s.startRelayToForeground(); err != nil {
-		log.Printf("Warning: failed to start relay: %v", err)
+	// Start surface to new foreground prism
+	if err := s.activateSurfaceToForeground(); err != nil {
+		log.Printf("Warning: failed to start surface: %v", err)
 	}
 
 	return nil
@@ -211,12 +211,12 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 
 	log.Printf("Prism %s brought to foreground", target.name)
 
-	// Hot-swap relay to new foreground prism (includes screen clear)
-	if err := s.swapRelay(); err != nil {
-		log.Printf("Warning: failed to swap relay: %v", err)
+	// Hot-swap surface to new foreground prism (includes screen clear)
+	if err := s.swapSurface(); err != nil {
+		log.Printf("Warning: failed to swap surface: %v", err)
 	}
 
-	// Send SIGWINCH after relay is connected to trigger redraw
+	// Send SIGWINCH after surface is connected to trigger redraw
 	if err := unix.Kill(target.pid, unix.SIGWINCH); err != nil {
 		log.Printf("Warning: failed to send SIGWINCH for redraw: %v", err)
 	}
@@ -284,12 +284,12 @@ func (s *supervisor) handleChildExit(pid, exitCode int) {
 		log.Printf("WARNING: Failed to send exit event - channel full or no listener for PID %d", pid)
 	}
 
-	// If foreground exited, clean up relay and reset terminal state
+	// If foreground exited, clean up surface and reset terminal state
 	if exitedIdx == 0 {
-		// Stop relay after foreground exit
-		if s.relay != nil {
-			stopRelay(s.relay)
-			s.relay = nil
+		// Stop surface after foreground exit
+		if s.surface != nil {
+			deactivateSurface(s.surface)
+			s.surface = nil
 		}
 
 		if err := s.termState.resetTerminalState(); err != nil {
@@ -374,15 +374,15 @@ func (s *supervisor) shutdown() {
 
 	log.Printf("Supervisor shutdown initiated")
 
-	// Stop relay during shutdown
-	if s.relay != nil {
-		stopRelay(s.relay)
-		s.relay = nil
+	// Stop surface during shutdown
+	if s.surface != nil {
+		deactivateSurface(s.surface)
+		s.surface = nil
 	}
 
-	// Cancel relay context
-	if s.relayCancel != nil {
-		s.relayCancel()
+	// Cancel surface context
+	if s.surfaceCancel != nil {
+		s.surfaceCancel()
 	}
 
 	// Signal shutdown
@@ -431,10 +431,10 @@ func (s *supervisor) isShuttingDown() bool {
 	return s.shuttingDown
 }
 
-// startRelayToForeground starts relay to current foreground prism
-func (s *supervisor) startRelayToForeground() error {
+// activateSurfaceToForeground starts surface to current foreground prism
+func (s *supervisor) activateSurfaceToForeground() error {
 	if len(s.prismList) == 0 {
-		return fmt.Errorf("no prisms to relay to")
+		return fmt.Errorf("no prisms to connect to")
 	}
 
 	foreground := s.prismList[0]
@@ -442,49 +442,49 @@ func (s *supervisor) startRelayToForeground() error {
 		return fmt.Errorf("internal error: position [0] not foreground")
 	}
 
-	// Stop existing relay if running
-	if s.relay != nil {
-		// Force the relay to stop by closing the read side
+	// Stop existing surface if running
+	if s.surface != nil {
+		// Force the surface to stop by closing the read side
 		// This makes io.Copy return immediately
-		stopRelay(s.relay)
-		s.relay = nil
-		log.Printf("Stopped previous relay before starting new one")
+		deactivateSurface(s.surface)
+		s.surface = nil
+		log.Printf("Stopped previous surface before starting new one")
 	}
 
-	// Start new relay: os.Stdin (Real PTY slave) ↔ foreground.ptyMaster
-	relay, err := startRelay(s.relayCtx, os.Stdin, foreground.ptyMaster)
+	// Start new surface: os.Stdin (Real PTY slave) ↔ foreground.ptyMaster
+	surface, err := activateSurface(s.surfaceCtx, os.Stdin, foreground.ptyMaster)
 	if err != nil {
-		return fmt.Errorf("failed to start relay: %w", err)
+		return fmt.Errorf("failed to start surface: %w", err)
 	}
 
-	s.relay = relay
-	log.Printf("Relay started to foreground prism: %s (PID %d)", foreground.name, foreground.pid)
+	s.surface = surface
+	log.Printf("Surface started to foreground prism: %s (PID %d)", foreground.name, foreground.pid)
 
 	return nil
 }
 
-// swapRelay stops current relay and starts new one to foreground
-func (s *supervisor) swapRelay() error {
+// swapSurface stops current surface and starts new one to foreground
+func (s *supervisor) swapSurface() error {
 	startTime := time.Now()
 
-	// Stop current relay
-	if s.relay != nil {
-		stopRelay(s.relay)
-		s.relay = nil
+	// Stop current surface
+	if s.surface != nil {
+		deactivateSurface(s.surface)
+		s.surface = nil
 	}
 
-	// Clear screen AFTER stopping old relay but BEFORE starting new one
+	// Clear screen AFTER stopping old surface but BEFORE starting new one
 	// This ensures no race between clear and buffered output from background prism
 	// CSI 2 J = clear screen, CSI H = cursor home, CSI 0 m = reset all attributes
 	os.Stdout.WriteString("\x1b[2J\x1b[H\x1b[0m")
 
-	// Start new relay to foreground
-	if err := s.startRelayToForeground(); err != nil {
+	// Start new surface to foreground
+	if err := s.activateSurfaceToForeground(); err != nil {
 		return err
 	}
 
 	swapLatency := time.Since(startTime)
-	log.Printf("Relay swap completed in %v", swapLatency)
+	log.Printf("Surface swap completed in %v", swapLatency)
 
 	if swapLatency > 50*time.Millisecond {
 		log.Printf("Warning: swap latency exceeded 50ms target: %v", swapLatency)

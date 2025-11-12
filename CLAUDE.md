@@ -21,25 +21,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 ┌─────────────────┐
-│  shine (CLI)    │ <- User: shine start/stop/status
+│      shine      │ <- User: shine start/stop/status
 └────────┬────────┘
-         │ IPC (Unix socket: /run/user/{uid}/shine/shine-service.*.sock)
-         ↓
-┌─────────────────┐
-│    shinectl     │ <- Service manager: reads prism.toml config
+         │ IPC (Unix socket: /run/user/{uid}/shine/shine.*.sock)
+         │
+┌────────┴────────┐
+│     shinectl    │ <- Service manager: reads prism.toml config
 └────────┬────────┘
          │ kitten @ launch --type=os-panel prismctl panel-0
-         ↓
-┌─────────────────┐
-│     Kitty       │ <- Layer shell panel window (positioned via --os-panel flags)
-└────────┬────────┘
-         ↓│↑ Real PTY (stdin/stdout)
+         │
 ┌────────┴────────┐
-│     pty_M       │ <- Real terminal PTY master (Kitty's PTY)
+│      kitty      │ <- Layer shell panel window (positioned via --os-panel flags)
 └────────┬────────┘
-         ↓│↑ Surface (bidirectional relay)
+        ↓│↑ Real PTY
+┌────────┴────────┐
+│      pty_M      │ <- Real terminal PTY master (Kitty's PTY)
+└────────┬────────┘
+        ↓│↑ Surface (bidirectional)
 ┌────────┴────────┐      ┌──────────────┐
-│     pty_S       │<────>│  prismctl    │ <- Prism supervisor (IPC: prism-{component}.{pid}.sock)
+│      pty_S      │<────>│  prismctl    │ <- Prism supervisor (IPC: prism-{instance}.sock)
 └─────────────────┘      └─┬────┬────┬──┘    Foreground TUI visible to user
                     ┌──────┘    │    └──────┐
                ┌────┴─────┐┌────┴─────┐┌────┴─────┐
@@ -52,6 +52,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 
 **Flow explanation:**
+
 1. User runs `shine start` → spawns `shinectl` in background
 2. `shinectl` reads `prism.toml` and spawns Kitty panels via remote control
 3. Each Kitty panel launches `prismctl` as its command (the prism supervisor)
@@ -85,24 +86,22 @@ User's terminal
 - **MRU ordering**: Most recently used light source gets I/O relay, others continue in background
 - **Crash recovery**: Restart policies (no, on-failure, unless-stopped, always)
 - **Hot-reload**: SIGHUP to shinectl reloads config without disrupting panels
-- **IPC**: JSON over Unix sockets (`/run/user/{uid}/shine/prism-{component}.{pid}.sock`)
+- **IPC**: JSON over Unix sockets (`/run/user/{uid}/shine/prism-{instance}.sock`)
 
 ## IPC Socket Management
 
-**IMPORTANT**: When sending IPC commands, always find the current socket first:
+**IMPORTANT**: Socket paths are deterministic based on prism name:
 
 ```bash
-# Find the most recent socket
-SOCK=$(ls -t /run/user/$(id -u)/shine/prism-*.sock | head -1)
+# Direct socket path by prism name (instance)
+SOCK=/run/user/$(id -u)/shine/prism-clock.sock
 
-# Or find by component name
-SOCK=$(ls -t /run/user/$(id -u)/shine/prism-test-prism.*.sock | head -1)
-
-# Then use it for commands
+# Use it for commands
 echo '{"action":"status"}' | socat - UNIX-CONNECT:$SOCK
-```
 
-**Why this matters**: Each prismctl instance creates a socket with its PID in the name. When you restart prismctl, the old socket is removed and a new one is created. Always look up the current socket before running parallel IPC commands to avoid "No such file or directory" errors.
+# Or find all prismctl sockets
+ls /run/user/$(id -u)/shine/prism-*.sock
+```
 
 ## Development Commands
 
@@ -264,7 +263,7 @@ The CLI help system uses a **hybrid approach**:
 - IDE integration: JSON metadata for hover text and autocomplete
 - Future: Man page generation, HTML docs, interactive TUI help browser
 
-See `docs/HELP-SYSTEM.md` for complete architecture documentation and integration examples.
+The help system uses embedded markdown files (cmd/shine/help/*.md) rendered with Glamour, plus structured metadata in help_metadata.go for programmatic access.
 
 ### Configuration System
 
@@ -364,10 +363,12 @@ shine status
 ### Socket Naming Convention
 
 ```
-/run/user/{uid}/shine/prism-{component}.{pid}.sock  # prismctl sockets
+/run/user/{uid}/shine/prism-{instance}.sock  # prismctl sockets
 ```
 
-Example: `/run/user/1000/shine/prism-panel-0.12345.sock`
+Where `{instance}` is the prism name (e.g., "clock", "bar", "spotify")
+
+Example: `/run/user/1000/shine/prism-clock.sock`
 
 ### Restart Policies
 
@@ -477,7 +478,8 @@ prismctl preserves terminal state when switching surfaces:
 - **docs/QUICKSTART.md**: 5-minute getting started guide
 - **docs/PHASE2-3-IMPLEMENTATION.md**: Detailed implementation report for Phase 2 & 3
 - **docs/configuration.md**: Complete configuration reference
-- **docs/HELP-SYSTEM.md**: Help system architecture and integration guide
+- **cmd/shine/help/*.md**: Embedded help content rendered with Glamour
+- **cmd/shine/help_metadata.go**: Structured metadata for help system
 - **examples/shine.toml**: Fully commented example config
 - **examples/prism.toml**: Prism configuration example
 - **examples/completion.zsh**: zsh shell completion script

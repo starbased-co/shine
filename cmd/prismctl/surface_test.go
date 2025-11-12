@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestStartRelay_NilRealPTY(t *testing.T) {
+func TestActivateSurface_NilRealPTY(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a temporary file for child PTY
@@ -19,18 +19,18 @@ func TestStartRelay_NilRealPTY(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	_, err = startRelay(ctx, nil, tmpFile)
+	_, err = activateSurface(ctx, nil, tmpFile)
 	if err == nil {
-		t.Error("startRelay() with nil realPTY should return error")
+		t.Error("activateSurface() with nil realPTY should return error")
 	}
 
-	expectedErr := "cannot start relay with nil PTY"
+	expectedErr := "cannot activate surface with nil PTY"
 	if err.Error() != expectedErr {
-		t.Errorf("startRelay() error = %q, want %q", err.Error(), expectedErr)
+		t.Errorf("activateSurface() error = %q, want %q", err.Error(), expectedErr)
 	}
 }
 
-func TestStartRelay_NilChildPTY(t *testing.T) {
+func TestActivateSurface_NilChildPTY(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a temporary file for real PTY
@@ -41,32 +41,32 @@ func TestStartRelay_NilChildPTY(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	_, err = startRelay(ctx, tmpFile, nil)
+	_, err = activateSurface(ctx, tmpFile, nil)
 	if err == nil {
-		t.Error("startRelay() with nil childPTY should return error")
+		t.Error("activateSurface() with nil childPTY should return error")
 	}
 
-	expectedErr := "cannot start relay with nil PTY"
+	expectedErr := "cannot activate surface with nil PTY"
 	if err.Error() != expectedErr {
-		t.Errorf("startRelay() error = %q, want %q", err.Error(), expectedErr)
+		t.Errorf("activateSurface() error = %q, want %q", err.Error(), expectedErr)
 	}
 }
 
-func TestStartRelay_BothNil(t *testing.T) {
+func TestActivateSurface_BothNil(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := startRelay(ctx, nil, nil)
+	_, err := activateSurface(ctx, nil, nil)
 	if err == nil {
-		t.Error("startRelay() with both nil PTYs should return error")
+		t.Error("activateSurface() with both nil PTYs should return error")
 	}
 
-	expectedErr := "cannot start relay with nil PTY"
+	expectedErr := "cannot activate surface with nil PTY"
 	if err.Error() != expectedErr {
-		t.Errorf("startRelay() error = %q, want %q", err.Error(), expectedErr)
+		t.Errorf("activateSurface() error = %q, want %q", err.Error(), expectedErr)
 	}
 }
 
-func TestStartRelay_ValidPTYs(t *testing.T) {
+func TestActivateSurface_ValidPTYs(t *testing.T) {
 	ctx := context.Background()
 
 	// Create pipe pairs to simulate PTY communication
@@ -83,36 +83,36 @@ func TestStartRelay_ValidPTYs(t *testing.T) {
 	defer childR.Close()
 
 	// Start relay with read end of real pipe and write end of child pipe
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	if state == nil {
-		t.Fatal("startRelay() returned nil state")
+		t.Fatal("activateSurface() returned nil state")
 	}
 
 	if !state.active {
-		t.Error("startRelay() state.active = false, want true")
+		t.Error("activateSurface() state.active = false, want true")
 	}
 
 	if state.ctx == nil {
-		t.Error("startRelay() state.ctx is nil")
+		t.Error("activateSurface() state.ctx is nil")
 	}
 
 	if state.cancel == nil {
-		t.Error("startRelay() state.cancel is nil")
+		t.Error("activateSurface() state.cancel is nil")
 	}
 
 	// Close pipes to trigger EOF in goroutines
 	realR.Close()
 	childW.Close()
 
-	// Clean up - stopRelay will wait for goroutines to exit
-	stopRelay(state)
+	// Clean up - deactivateSurface will wait for goroutines to exit
+	deactivateSurface(state)
 }
 
-func TestStartRelay_Cancellation(t *testing.T) {
+func TestActivateSurface_Cancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create pipe pairs
@@ -128,9 +128,9 @@ func TestStartRelay_Cancellation(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	// Cancel parent context
@@ -139,7 +139,7 @@ func TestStartRelay_Cancellation(t *testing.T) {
 	// Give goroutines time to detect cancellation
 	time.Sleep(50 * time.Millisecond)
 
-	// State should still be active (only stopRelay sets it to false)
+	// State should still be active (only deactivateSurface sets it to false)
 	if !state.active {
 		t.Error("cancellation should not directly set state.active to false")
 	}
@@ -149,10 +149,10 @@ func TestStartRelay_Cancellation(t *testing.T) {
 	childW.Close()
 
 	// Clean up
-	stopRelay(state)
+	deactivateSurface(state)
 }
 
-func TestStartRelay_DataFlow(t *testing.T) {
+func TestActivateSurface_DataFlow(t *testing.T) {
 	ctx := context.Background()
 
 	// Create pipe pairs for bidirectional communication
@@ -169,9 +169,9 @@ func TestStartRelay_DataFlow(t *testing.T) {
 	defer childR.Close()
 
 	// Start relay
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	// Write data to real PTY (simulating user input)
@@ -202,24 +202,24 @@ func TestStartRelay_DataFlow(t *testing.T) {
 	childW.Close()
 
 	// Clean up
-	stopRelay(state)
+	deactivateSurface(state)
 }
 
-func TestStopRelay_NilState(t *testing.T) {
+func TestDeactivateSurface_NilState(t *testing.T) {
 	// Should not panic
-	stopRelay(nil)
+	deactivateSurface(nil)
 }
 
-func TestStopRelay_InactiveState(t *testing.T) {
-	state := &relayState{
+func TestDeactivateSurface_InactiveState(t *testing.T) {
+	state := &surfaceState{
 		active: false,
 	}
 
 	// Should not panic
-	stopRelay(state)
+	deactivateSurface(state)
 }
 
-func TestStopRelay_ActiveState(t *testing.T) {
+func TestDeactivateSurface_ActiveState(t *testing.T) {
 	ctx := context.Background()
 
 	// Create pipe pairs
@@ -235,9 +235,9 @@ func TestStopRelay_ActiveState(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	if !state.active {
@@ -248,14 +248,14 @@ func TestStopRelay_ActiveState(t *testing.T) {
 	realR.Close()
 	childW.Close()
 
-	stopRelay(state)
+	deactivateSurface(state)
 
 	if state.active {
-		t.Error("stopRelay() should set active to false")
+		t.Error("deactivateSurface() should set active to false")
 	}
 }
 
-func TestStopRelay_DoubleStop(t *testing.T) {
+func TestDeactivateSurface_DoubleStop(t *testing.T) {
 	ctx := context.Background()
 
 	// Create pipe pairs
@@ -271,9 +271,9 @@ func TestStopRelay_DoubleStop(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	// Close pipes to unblock goroutines
@@ -281,13 +281,13 @@ func TestStopRelay_DoubleStop(t *testing.T) {
 	childW.Close()
 
 	// First stop
-	stopRelay(state)
+	deactivateSurface(state)
 
 	// Second stop should be safe (no-op)
-	stopRelay(state)
+	deactivateSurface(state)
 }
 
-func TestStopRelay_WaitsForGoroutines(t *testing.T) {
+func TestDeactivateSurface_WaitsForGoroutines(t *testing.T) {
 	ctx := context.Background()
 
 	// Create pipe pairs
@@ -303,51 +303,51 @@ func TestStopRelay_WaitsForGoroutines(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() unexpected error: %v", err)
+		t.Fatalf("activateSurface() unexpected error: %v", err)
 	}
 
 	// Close pipes to trigger EOF in goroutines
 	realR.Close()
 	childW.Close()
 
-	// stopRelay should wait for goroutines to finish
+	// deactivateSurface should wait for goroutines to finish
 	done := make(chan struct{})
 	go func() {
-		stopRelay(state)
+		deactivateSurface(state)
 		close(done)
 	}()
 
 	// Wait with timeout
 	select {
 	case <-done:
-		// Success - stopRelay completed
+		// Success - deactivateSurface completed
 	case <-time.After(2 * time.Second):
-		t.Error("stopRelay() did not complete within timeout (goroutines may not have exited)")
+		t.Error("deactivateSurface() did not complete within timeout (goroutines may not have exited)")
 	}
 }
 
-func TestRelayState_StructFields(t *testing.T) {
+func TestSurfaceState_StructFields(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	state := &relayState{
+	state := &surfaceState{
 		ctx:    ctx,
 		cancel: cancel,
 		active: true,
 	}
 
 	if state.ctx != ctx {
-		t.Error("relayState.ctx not set correctly")
+		t.Error("surfaceState.ctx not set correctly")
 	}
 
 	if state.cancel == nil {
-		t.Error("relayState.cancel is nil")
+		t.Error("surfaceState.cancel is nil")
 	}
 
 	if !state.active {
-		t.Error("relayState.active should be true")
+		t.Error("surfaceState.active should be true")
 	}
 
 	// Verify wg is zero-initialized

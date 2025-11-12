@@ -40,7 +40,7 @@ prismctl (supervisor - this program)
 
 ## IPC Protocol
 
-Socket location: `/run/user/{uid}/shine/prism-{component}.{pid}.sock`
+Socket location: `/run/user/{uid}/shine/prism-{instance}.sock`
 
 ### Commands
 
@@ -71,7 +71,7 @@ Socket location: `/run/user/{uid}/shine/prism-{component}.{pid}.sock`
 
 ## Testing
 
-See `../../docs/prismtty/TESTING.md` for comprehensive test guide.
+See test suite in `../../test/integration/` for automated tests.
 
 Quick test:
 ```bash
@@ -110,10 +110,9 @@ Phase 2+ will add automatic restart, health monitoring, and integration with shi
 
 ## Documentation
 
-- Architecture: `../../docs/prismtty/plan.md`
-- Implementation checklist: `../../docs/prismtty/checklist.md`
-- Testing guide: `../../docs/prismtty/TESTING.md`
-- Phase 1 completion: `../../docs/prismtty/PHASE1-COMPLETE.md`
+- Architecture: See `../../docs/tour.md` for complete system overview
+- IPC Protocol: `../../docs/ipc.md`
+- Configuration: `../../docs/configuration.md`
 
 ## License
 

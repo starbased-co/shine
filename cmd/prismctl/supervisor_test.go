@@ -98,15 +98,15 @@ func TestNewSupervisor_Initialization(t *testing.T) {
 		t.Error("supervisor.childExitCh is nil")
 	}
 
-	if sup.relay != nil {
+	if sup.surface != nil {
 		t.Error("supervisor.relay should be nil initially")
 	}
 
-	if sup.relayCtx == nil {
-		t.Error("supervisor.relayCtx is nil")
+	if sup.surfaceCtx == nil {
+		t.Error("supervisor.surfaceCtx is nil")
 	}
 
-	if sup.relayCancel == nil {
+	if sup.surfaceCancel == nil {
 		t.Error("supervisor.relayCancel is nil")
 	}
 
@@ -240,21 +240,21 @@ func TestSupervisor_RelayContextCancellation(t *testing.T) {
 
 	// Verify context is not cancelled initially
 	select {
-	case <-sup.relayCtx.Done():
-		t.Error("relayCtx should not be cancelled on initialization")
+	case <-sup.surfaceCtx.Done():
+		t.Error("surfaceCtx should not be cancelled on initialization")
 	default:
 		// Expected
 	}
 
 	// Cancel context
-	sup.relayCancel()
+	sup.surfaceCancel()
 
 	// Verify context is now cancelled
 	select {
-	case <-sup.relayCtx.Done():
+	case <-sup.surfaceCtx.Done():
 		// Expected
 	default:
-		t.Error("relayCtx should be cancelled after calling relayCancel()")
+		t.Error("surfaceCtx should be cancelled after calling relayCancel()")
 	}
 }
 
@@ -308,9 +308,9 @@ func TestRelayState_ContextPropagation(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := startRelay(ctx, realR, childW)
+	state, err := activateSurface(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("startRelay() failed: %v", err)
+		t.Fatalf("activateSurface() failed: %v", err)
 	}
 
 	// Cancel parent context
@@ -328,7 +328,7 @@ func TestRelayState_ContextPropagation(t *testing.T) {
 	realR.Close()
 	childW.Close()
 
-	stopRelay(state)
+	deactivateSurface(state)
 }
 
 func TestSupervisor_ChildExitChannelBuffered(t *testing.T) {

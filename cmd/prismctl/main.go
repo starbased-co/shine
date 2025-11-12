@@ -73,14 +73,14 @@ func main() {
 	}
 
 	prismName := os.Args[1]
-	componentName := prismName
+	instanceName := prismName
 
-	// Optional component name for socket identification
+	// Optional instance name for socket identification
 	if len(os.Args) >= 3 {
-		componentName = os.Args[2]
+		instanceName = os.Args[2]
 	}
 
-	log.Printf("prismctl starting (prism: %s, component: %s)", prismName, componentName)
+	log.Printf("prismctl starting (prism: %s, instance: %s)", prismName, instanceName)
 
 	// Initialize terminal state management
 	termState, err := newTerminalState()
@@ -97,7 +97,7 @@ func main() {
 	defer sigHandler.stop()
 
 	// Start IPC server
-	ipcServer, err := newIPCServer(componentName, sup)
+	ipcServer, err := newIPCServer(instanceName, sup)
 	if err != nil {
 		log.Fatalf("Failed to start IPC server: %v", err)
 	}

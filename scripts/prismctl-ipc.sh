@@ -15,13 +15,13 @@ Commands:
   $0 <socket> status               # Query current status
   $0 <socket> stop                 # Stop prismctl
 
-Socket name format: prism-<component>.<pid>.sock
+Socket name format: prism-<instance>.sock
 
 Examples:
-  $0 prism-test-panel.12345.sock start shine-spotify
-  $0 prism-test-panel.12345.sock kill shine-clock
-  $0 prism-test-panel.12345.sock status
-  $0 prism-test-panel.12345.sock stop
+  $0 prism-clock.sock start shine-spotify
+  $0 prism-bar.sock kill shine-clock
+  $0 prism-chat.sock status
+  $0 prism-spotify.sock stop
 
 List available sockets:
   ls -la $SOCKET_DIR/

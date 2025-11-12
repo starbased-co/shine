@@ -17,8 +17,8 @@ func findShinectlSocket() (string, error) {
 	uid := os.Getuid()
 	socketsDir := fmt.Sprintf("/run/user/%d/shine", uid)
 
-	// Look for shine-service.*.sock
-	pattern := filepath.Join(socketsDir, "shine-service.*.sock")
+	// Look for shine.*.sock
+	pattern := filepath.Join(socketsDir, "shine.*.sock")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", fmt.Errorf("failed to search for socket: %w", err)
@@ -156,13 +156,13 @@ func cmdStop() error {
 
 	// Send stop command to each panel
 	for _, socket := range sockets {
-		componentName := extractComponentName(socket)
-		Muted(fmt.Sprintf("Stopping %s...", componentName))
+		instanceName := extractInstanceName(socket)
+		Muted(fmt.Sprintf("Stopping %s...", instanceName))
 
 		cmd := ipcCommand{Action: "stop"}
 		_, err := sendIPCCommand(socket, cmd)
 		if err != nil {
-			Warning(fmt.Sprintf("Failed to stop %s: %v", componentName, err))
+			Warning(fmt.Sprintf("Failed to stop %s: %v", instanceName, err))
 		}
 	}
 
@@ -202,9 +202,9 @@ func cmdStatus() error {
 
 	// Query each panel
 	for _, socket := range sockets {
-		componentName := extractComponentName(socket)
+		instanceName := extractInstanceName(socket)
 		fmt.Println()
-		fmt.Printf("%s %s\n", styleBold.Render("Panel:"), componentName)
+		fmt.Printf("%s %s\n", styleBold.Render("Panel:"), instanceName)
 		fmt.Printf("%s %s\n", styleMuted.Render("Socket:"), socket)
 
 		// Query status
@@ -316,15 +316,12 @@ func cmdLogs(panelID string) error {
 	return nil
 }
 
-// extractComponentName extracts the component name from a socket path
-// e.g., "/run/user/1000/shine/prism-panel-1.12345.sock" -> "panel-1"
-func extractComponentName(socketPath string) string {
+// extractInstanceName extracts the instance name from a socket path
+// e.g., "/run/user/1000/shine/prism-clock.sock" -> "clock"
+func extractInstanceName(socketPath string) string {
 	base := filepath.Base(socketPath)
-	// Remove "prism-" prefix and ".PID.sock" suffix
+	// Remove "prism-" prefix and ".sock" suffix
 	name := strings.TrimPrefix(base, "prism-")
-	parts := strings.Split(name, ".")
-	if len(parts) > 0 {
-		return parts[0]
-	}
+	name = strings.TrimSuffix(name, ".sock")
 	return name
 }

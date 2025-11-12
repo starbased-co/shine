@@ -334,8 +334,8 @@ shine logs shinectl
 ## Next Steps
 
 1. **Read Full Documentation**
-   - Architecture: `docs/prismtty/plan.md`
-   - Implementation: `docs/PHASE2-3-IMPLEMENTATION.md`
+   - Architecture: `docs/tour.md` - Complete system overview
+   - Configuration: `docs/configuration.md` - Complete config reference
 
 2. **Build Your Own Prisms**
    - See example: `cmd/shine-clock/`

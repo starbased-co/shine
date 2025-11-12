@@ -30,8 +30,10 @@ prismctl provides:
 
 The IPC socket is created at:
 ```text
-/run/user/{uid}/shine/prism-{component}.{pid}.sock
+/run/user/{uid}/shine/prism-{instance}.sock
 ```
+
+Where `{instance}` is the prism name (second argument, defaults to prism-name).
 
 ## EXAMPLES
 

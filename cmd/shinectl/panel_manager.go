@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,21 +14,21 @@ import (
 // Panel represents a spawned Kitty panel running prismctl
 type Panel struct {
 	Name       string       // Prism name (e.g., "shine-clock")
-	Component  string       // Component name for socket (e.g., "panel-1")
+	Instance   string       // Instance name for socket (e.g., "clock", "bar")
 	WindowID   string       // Kitty window ID
 	SocketPath string       // Path to prismctl Unix socket
 	IPCClient  *IPCClient   // IPC client for communication
 	Config     *PrismEntry  // Configuration from prism.toml
-	PID        int          // prismctl process PID
+	PID        int          // prismctl process PID (deprecated - not tracked)
 	CrashCount int          // Crash counter for restart policy
 	LastCrash  time.Time    // Last crash timestamp
 }
 
 // PanelManager manages the lifecycle of Kitty panels running prismctl
 type PanelManager struct {
-	mu         sync.Mutex
-	panels     map[string]*Panel // Map: component name -> Panel
-	logDir     string
+	mu          sync.Mutex
+	panels      map[string]*Panel // Map: instance name -> Panel
+	logDir      string
 	prismctlBin string
 }
 
@@ -68,12 +67,12 @@ func NewPanelManager() (*PanelManager, error) {
 }
 
 // SpawnPanel spawns a new Kitty panel running prismctl
-func (pm *PanelManager) SpawnPanel(config *PrismEntry, componentName string) (*Panel, error) {
+func (pm *PanelManager) SpawnPanel(config *PrismEntry, instanceName string) (*Panel, error) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
 	// Check if panel already exists
-	if existing, ok := pm.panels[componentName]; ok {
+	if existing, ok := pm.panels[instanceName]; ok {
 		return existing, nil
 	}
 
@@ -81,7 +80,7 @@ func (pm *PanelManager) SpawnPanel(config *PrismEntry, componentName string) (*P
 	panelCfg := config.ToPanelConfig()
 
 	// Build prismctl command path with arguments
-	prismctlArgs := []string{config.Name, componentName}
+	prismctlArgs := []string{config.Name, instanceName}
 
 	// Generate kitten @ launch arguments with positioning
 	kittenArgs := panelCfg.ToRemoteControlArgs(pm.prismctlBin)
@@ -102,62 +101,48 @@ func (pm *PanelManager) SpawnPanel(config *PrismEntry, componentName string) (*P
 		return nil, fmt.Errorf("failed to get window ID from Kitty")
 	}
 
-	log.Printf("Spawned panel %s (window ID: %s) for prism %s", componentName, windowID, config.Name)
+	log.Printf("Spawned panel %s (window ID: %s) for prism %s", instanceName, windowID, config.Name)
 
 	// Build socket path (will be created by prismctl)
 	uid := os.Getuid()
-	socketPattern := fmt.Sprintf("/run/user/%d/shine/prism-%s.*.sock", uid, componentName)
+	socketPath := fmt.Sprintf("/run/user/%d/shine/prism-%s.sock", uid, instanceName)
 
 	// Wait for prismctl to create socket (up to 5 seconds)
-	var socketPath string
 	for i := 0; i < 50; i++ {
-		matches, _ := filepath.Glob(socketPattern)
-		if len(matches) > 0 {
-			socketPath = matches[0]
+		if _, err := os.Stat(socketPath); err == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	if socketPath == "" {
+	// Verify socket was created
+	if _, err := os.Stat(socketPath); err != nil {
 		return nil, fmt.Errorf("prismctl socket not created within timeout")
-	}
-
-	// Extract PID from socket name (prism-{component}.{pid}.sock)
-	base := filepath.Base(socketPath)
-	parts := strings.Split(base, ".")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid socket name format: %s", base)
-	}
-	pidStr := parts[len(parts)-2]
-	pid, err := strconv.Atoi(pidStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse PID from socket name: %w", err)
 	}
 
 	panel := &Panel{
 		Name:       config.Name,
-		Component:  componentName,
+		Instance:   instanceName,
 		WindowID:   windowID,
 		SocketPath: socketPath,
 		IPCClient:  NewIPCClient(socketPath),
 		Config:     config,
-		PID:        pid,
+		PID:        0, // PID not tracked via socket name anymore
 		CrashCount: 0,
 	}
 
-	pm.panels[componentName] = panel
+	pm.panels[instanceName] = panel
 	return panel, nil
 }
 
 // KillPanel terminates a panel by closing the Kitty window
-func (pm *PanelManager) KillPanel(componentName string) error {
+func (pm *PanelManager) KillPanel(instanceName string) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	panel, ok := pm.panels[componentName]
+	panel, ok := pm.panels[instanceName]
 	if !ok {
-		return fmt.Errorf("panel %s not found", componentName)
+		return fmt.Errorf("panel %s not found", instanceName)
 	}
 
 	// Close Kitty window (this will also kill prismctl)
@@ -166,17 +151,17 @@ func (pm *PanelManager) KillPanel(componentName string) error {
 		log.Printf("Warning: failed to close window %s: %v", panel.WindowID, err)
 	}
 
-	delete(pm.panels, componentName)
-	log.Printf("Killed panel %s (window ID: %s)", componentName, panel.WindowID)
+	delete(pm.panels, instanceName)
+	log.Printf("Killed panel %s (window ID: %s)", instanceName, panel.WindowID)
 	return nil
 }
 
-// GetPanel retrieves a panel by component name
-func (pm *PanelManager) GetPanel(componentName string) (*Panel, bool) {
+// GetPanel retrieves a panel by instance name
+func (pm *PanelManager) GetPanel(instanceName string) (*Panel, bool) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	panel, ok := pm.panels[componentName]
+	panel, ok := pm.panels[instanceName]
 	return panel, ok
 }
 
@@ -207,7 +192,7 @@ func (pm *PanelManager) MonitorPanels() {
 
 	for _, panel := range panels {
 		if !pm.CheckHealth(panel) {
-			log.Printf("Panel %s (PID %d) is not responsive", panel.Component, panel.PID)
+			log.Printf("Panel %s (PID %d) is not responsive", panel.Instance, panel.PID)
 			pm.handlePanelCrash(panel)
 		}
 	}
@@ -219,7 +204,7 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 	defer pm.mu.Unlock()
 
 	// Remove from active panels
-	delete(pm.panels, panel.Component)
+	delete(pm.panels, panel.Instance)
 
 	// Update crash tracking
 	now := time.Now()
@@ -230,7 +215,7 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 	panel.CrashCount++
 	panel.LastCrash = now
 
-	log.Printf("Panel %s crashed (crash count: %d)", panel.Component, panel.CrashCount)
+	log.Printf("Panel %s crashed (crash count: %d)", panel.Instance, panel.CrashCount)
 
 	// Check restart policy
 	policy := panel.Config.GetRestartPolicy()
@@ -249,13 +234,13 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 
 	// Check max_restarts limit
 	if shouldRestart && panel.Config.MaxRestarts > 0 && panel.CrashCount > panel.Config.MaxRestarts {
-		log.Printf("Panel %s exceeded max_restarts (%d), not restarting", panel.Component, panel.Config.MaxRestarts)
+		log.Printf("Panel %s exceeded max_restarts (%d), not restarting", panel.Instance, panel.Config.MaxRestarts)
 		shouldRestart = false
 	}
 
 	if shouldRestart {
 		delay := panel.Config.GetRestartDelay()
-		log.Printf("Restarting panel %s after %v delay", panel.Component, delay)
+		log.Printf("Restarting panel %s after %v delay", panel.Instance, delay)
 
 		// Restart after delay (in goroutine to not block)
 		go func() {
@@ -264,9 +249,9 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 			defer pm.mu.Unlock()
 
 			// Re-spawn panel
-			newPanel, err := pm.spawnPanelUnlocked(panel.Config, panel.Component)
+			newPanel, err := pm.spawnPanelUnlocked(panel.Config, panel.Instance)
 			if err != nil {
-				log.Printf("Failed to restart panel %s: %v", panel.Component, err)
+				log.Printf("Failed to restart panel %s: %v", panel.Instance, err)
 				return
 			}
 
@@ -274,18 +259,18 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 			newPanel.CrashCount = panel.CrashCount
 			newPanel.LastCrash = panel.LastCrash
 
-			log.Printf("Successfully restarted panel %s (PID %d)", panel.Component, newPanel.PID)
+			log.Printf("Successfully restarted panel %s (PID %d)", panel.Instance, newPanel.PID)
 		}()
 	}
 }
 
 // spawnPanelUnlocked is the internal spawn function (caller must hold lock)
-func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, componentName string) (*Panel, error) {
+func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, instanceName string) (*Panel, error) {
 	// Convert PrismEntry to panel.Config for positioning
 	panelCfg := config.ToPanelConfig()
 
 	// Build prismctl command path with arguments
-	prismctlArgs := []string{config.Name, componentName}
+	prismctlArgs := []string{config.Name, instanceName}
 
 	// Generate kitten @ launch arguments with positioning
 	kittenArgs := panelCfg.ToRemoteControlArgs(pm.prismctlBin)
@@ -306,40 +291,33 @@ func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, componentName str
 
 	// Wait for socket
 	uid := os.Getuid()
-	socketPattern := fmt.Sprintf("/run/user/%d/shine/prism-%s.*.sock", uid, componentName)
+	socketPath := fmt.Sprintf("/run/user/%d/shine/prism-%s.sock", uid, instanceName)
 
-	var socketPath string
+	// Wait for prismctl to create socket (up to 5 seconds)
 	for i := 0; i < 50; i++ {
-		matches, _ := filepath.Glob(socketPattern)
-		if len(matches) > 0 {
-			socketPath = matches[0]
+		if _, err := os.Stat(socketPath); err == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	if socketPath == "" {
+	// Verify socket was created
+	if _, err := os.Stat(socketPath); err != nil {
 		return nil, fmt.Errorf("prismctl socket not created within timeout")
 	}
 
-	// Extract PID
-	base := filepath.Base(socketPath)
-	parts := strings.Split(base, ".")
-	pidStr := parts[len(parts)-2]
-	pid, _ := strconv.Atoi(pidStr)
-
 	panel := &Panel{
 		Name:       config.Name,
-		Component:  componentName,
+		Instance:   instanceName,
 		WindowID:   windowID,
 		SocketPath: socketPath,
 		IPCClient:  NewIPCClient(socketPath),
 		Config:     config,
-		PID:        pid,
+		PID:        0, // PID not tracked via socket name anymore
 		CrashCount: 0,
 	}
 
-	pm.panels[componentName] = panel
+	pm.panels[instanceName] = panel
 	return panel, nil
 }
 
@@ -348,8 +326,8 @@ func (pm *PanelManager) Shutdown() {
 	panels := pm.ListPanels()
 
 	for _, panel := range panels {
-		log.Printf("Stopping panel %s", panel.Component)
+		log.Printf("Stopping panel %s", panel.Instance)
 		_ = panel.IPCClient.Stop()
-		pm.KillPanel(panel.Component)
+		pm.KillPanel(panel.Instance)
 	}
 }

@@ -150,9 +150,6 @@ func helpList() string {
 
 		for _, cmd := range commands {
 			content += fmt.Sprintf("**`%s`** - %s\n", cmd.Usage, cmd.Synopsis)
-			if len(cmd.Related) > 0 {
-				content += fmt.Sprintf("  Related: %s\n", joinCommands(cmd.Related))
-			}
 			content += "\n"
 		}
 	}
@@ -198,22 +195,6 @@ func helpCategories() string {
 	return content
 }
 
-// joinCommands joins command names with commas and backticks
-func joinCommands(commands []string) string {
-	if len(commands) == 0 {
-		return ""
-	}
-
-	result := ""
-	for i, cmd := range commands {
-		if i > 0 {
-			result += ", "
-		}
-		result += fmt.Sprintf("`%s`", cmd)
-	}
-	return result
-}
-
 // helpJSON outputs help metadata in JSON format (for machine consumption)
 func helpJSON(topic string) error {
 	var output interface{}
@@ -232,20 +213,16 @@ func helpJSON(topic string) error {
 		if cmd, ok := getCommandHelp(topic); ok {
 			// Omit the full markdown content for JSON output
 			type CommandMeta struct {
-				Name     string   `json:"name"`
-				Category string   `json:"category"`
-				Synopsis string   `json:"synopsis"`
-				Usage    string   `json:"usage"`
-				Related  []string `json:"related"`
-				SeeAlso  []string `json:"see_also"`
+				Name     string `json:"name"`
+				Category string `json:"category"`
+				Synopsis string `json:"synopsis"`
+				Usage    string `json:"usage"`
 			}
 			output = CommandMeta{
 				Name:     cmd.Name,
 				Category: cmd.Category,
 				Synopsis: cmd.Synopsis,
 				Usage:    cmd.Usage,
-				Related:  cmd.Related,
-				SeeAlso:  cmd.SeeAlso,
 			}
 		} else {
 			return fmt.Errorf("unknown command: %s", topic)

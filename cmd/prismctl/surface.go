@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// relayState tracks the state of an active relay
-type relayState struct {
+// surfaceState tracks the state of an active surface
+type surfaceState struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
@@ -20,29 +20,29 @@ type relayState struct {
 	childPTY  *os.File // Track PTY so we can interrupt it
 }
 
-// startRelay launches bidirectional copy between Real PTY and child PTY
+// activateSurface launches bidirectional copy between Real PTY and child PTY
 // Real PTY (stdin/stdout) ↔ child PTY master (foreground prism)
-func startRelay(ctx context.Context, realPTY *os.File, childPTY *os.File) (*relayState, error) {
+func activateSurface(ctx context.Context, realPTY *os.File, childPTY *os.File) (*surfaceState, error) {
 	if realPTY == nil || childPTY == nil {
-		return nil, fmt.Errorf("cannot start relay with nil PTY")
+		return nil, fmt.Errorf("cannot activate surface with nil PTY")
 	}
 
-	// Clear any previous read deadline (from stopRelay)
+	// Clear any previous read deadline (from deactivateSurface)
 	if err := childPTY.SetReadDeadline(time.Time{}); err != nil {
 		log.Printf("Warning: failed to clear read deadline: %v", err)
 	}
 
-	// Create cancellable context for this relay
-	relayCtx, cancel := context.WithCancel(ctx)
+	// Create cancellable context for this surface
+	surfaceCtx, cancel := context.WithCancel(ctx)
 
-	state := &relayState{
-		ctx:      relayCtx,
+	state := &surfaceState{
+		ctx:      surfaceCtx,
 		cancel:   cancel,
 		active:   true,
 		childPTY: childPTY,
 	}
 
-	// Start bidirectional relay goroutines
+	// Start bidirectional surface goroutines
 	state.wg.Add(2)
 
 	// Real PTY → child PTY (user input to prism)
@@ -54,7 +54,7 @@ func startRelay(ctx context.Context, realPTY *os.File, childPTY *os.File) (*rela
 			// - ErrClosedPipe: pipe closed
 			// - "input/output error": PTY closed (ENXIO/EIO)
 			if err != io.EOF && err != io.ErrClosedPipe && !isExpectedPTYError(err) {
-				log.Printf("Relay (real→child) error: %v", err)
+				log.Printf("Surface (real→child) error: %v", err)
 			}
 		}
 	}()
@@ -68,18 +68,18 @@ func startRelay(ctx context.Context, realPTY *os.File, childPTY *os.File) (*rela
 			// - ErrClosedPipe: pipe closed
 			// - "input/output error": PTY closed (ENXIO/EIO)
 			if err != io.EOF && err != io.ErrClosedPipe && !isExpectedPTYError(err) {
-				log.Printf("Relay (child→real) error: %v", err)
+				log.Printf("Surface (child→real) error: %v", err)
 			}
 		}
 	}()
 
-	log.Printf("Relay started: Real PTY ↔ child PTY (fd %d)", childPTY.Fd())
+	log.Printf("Surface activated: Real PTY ↔ child PTY (fd %d)", childPTY.Fd())
 
 	return state, nil
 }
 
-// stopRelay cancels relay goroutines (non-blocking)
-func stopRelay(state *relayState) {
+// deactivateSurface cancels surface goroutines (non-blocking)
+func deactivateSurface(state *surfaceState) {
 	if state == nil || !state.active {
 		return
 	}
@@ -107,5 +107,5 @@ func isExpectedPTYError(err error) bool {
 	// Common PTY closure errors on Linux
 	return strings.Contains(errStr, "input/output error") || // EIO
 		strings.Contains(errStr, "no such device") || // ENXIO
-		strings.Contains(errStr, "i/o timeout") // Deadline set during stopRelay
+		strings.Contains(errStr, "i/o timeout") // Deadline set during deactivateSurface
 }

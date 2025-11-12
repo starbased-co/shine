@@ -49,8 +49,8 @@ type ipcServer struct {
 }
 
 // newIPCServer creates a new IPC server
-func newIPCServer(component string, supervisor *supervisor) (*ipcServer, error) {
-	// Use XDG runtime directory with PID suffix
+func newIPCServer(instance string, supervisor *supervisor) (*ipcServer, error) {
+	// Use XDG runtime directory
 	uid := os.Getuid()
 	runtimeDir := fmt.Sprintf("/run/user/%d/shine", uid)
 
@@ -59,11 +59,11 @@ func newIPCServer(component string, supervisor *supervisor) (*ipcServer, error) 
 		return nil, fmt.Errorf("failed to create runtime directory: %w", err)
 	}
 
-	// Extract basename from component path (handles "./test/fixtures/test-prism" -> "test-prism")
-	componentName := filepath.Base(component)
+	// Extract basename from instance path (handles "./test/fixtures/test-prism" -> "test-prism")
+	instanceName := filepath.Base(instance)
 
-	// Socket path with PID to prevent conflicts on restart
-	socketPath := filepath.Join(runtimeDir, fmt.Sprintf("prism-%s.%d.sock", componentName, os.Getpid()))
+	// Socket path
+	socketPath := filepath.Join(runtimeDir, fmt.Sprintf("prism-%s.sock", instanceName))
 
 	// Remove stale socket if exists
 	_ = os.Remove(socketPath)

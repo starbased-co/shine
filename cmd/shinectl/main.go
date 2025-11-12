@@ -144,18 +144,19 @@ func setupLogging() *os.File {
 
 // spawnConfiguredPanels spawns panels for all prisms in config
 func spawnConfiguredPanels(pm *PanelManager, config *Config) error {
-	for i, prism := range config.Prisms {
-		componentName := fmt.Sprintf("panel-%d", i)
+	for _, prism := range config.Prisms {
+		// Use prism name as instance name for kitty --instance-group
+		instanceName := prism.Name
 
-		log.Printf("Spawning panel for prism: %s (component: %s)", prism.Name, componentName)
+		log.Printf("Spawning panel for prism: %s (instance: %s)", prism.Name, instanceName)
 
-		panel, err := pm.SpawnPanel(&prism, componentName)
+		panel, err := pm.SpawnPanel(&prism, instanceName)
 		if err != nil {
 			return fmt.Errorf("failed to spawn panel for %s: %w", prism.Name, err)
 		}
 
-		log.Printf("Panel spawned successfully: %s (PID: %d, socket: %s)",
-			panel.Component, panel.PID, panel.SocketPath)
+		log.Printf("Panel spawned successfully: %s (socket: %s)",
+			panel.Instance, panel.SocketPath)
 	}
 
 	return nil
@@ -190,28 +191,27 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 	for name, panel := range currentPrisms {
 		if _, exists := newPrisms[name]; !exists {
 			log.Printf("Removing panel for prism %s (no longer in config)", name)
-			if err := pm.KillPanel(panel.Component); err != nil {
-				log.Printf("Failed to kill panel %s: %v", panel.Component, err)
+			if err := pm.KillPanel(panel.Instance); err != nil {
+				log.Printf("Failed to kill panel %s: %v", panel.Instance, err)
 			}
 		}
 	}
 
 	// Add new panels
-	componentCounter := len(currentPanels)
 	for name, prism := range newPrisms {
 		if _, exists := currentPrisms[name]; !exists {
-			componentName := fmt.Sprintf("panel-%d", componentCounter)
-			componentCounter++
+			// Use prism name as instance name
+			instanceName := prism.Name
 
-			log.Printf("Adding new panel for prism: %s (component: %s)", name, componentName)
+			log.Printf("Adding new panel for prism: %s (instance: %s)", name, instanceName)
 
-			panel, err := pm.SpawnPanel(prism, componentName)
+			panel, err := pm.SpawnPanel(prism, instanceName)
 			if err != nil {
 				log.Printf("Failed to spawn panel for %s: %v", name, err)
 				continue
 			}
 
-			log.Printf("New panel spawned: %s (PID: %d)", panel.Component, panel.PID)
+			log.Printf("New panel spawned: %s", panel.Instance)
 		}
 	}
 

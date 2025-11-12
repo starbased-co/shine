@@ -2,14 +2,11 @@ package main
 
 // CommandHelp defines structured metadata for command help
 type CommandHelp struct {
-	Name        string   // Command name
-	Category    string   // Command category for grouping
-	Synopsis    string   // Brief one-line description
-	Description string   // Longer description (optional)
-	Usage       string   // Usage syntax
-	Content     string   // Full help content (markdown)
-	Related     []string // Related commands
-	SeeAlso     []string // Additional topics/resources
+	Name     string // Command name
+	Category string // Command category for grouping
+	Synopsis string // Brief one-line description
+	Usage    string // Usage syntax
+	Content  string // Full help content (markdown)
 }
 
 // helpRegistry contains all command help metadata
@@ -17,47 +14,37 @@ var helpRegistry = map[string]*CommandHelp{
 	"start": {
 		Name:     "start",
 		Category: "Service Management",
-		Synopsis: "Start the shine service and enabled panels",
+		Synopsis: "Start the shine service",
 		Usage:    "shine start",
 		Content:  startHelp,
-		Related:  []string{"stop", "status", "reload"},
-		SeeAlso:  []string{"Configuration: ~/.config/shine/prism.toml"},
 	},
 	"stop": {
 		Name:     "stop",
 		Category: "Service Management",
-		Synopsis: "Stop all running panels gracefully",
+		Synopsis: "Stop all panels",
 		Usage:    "shine stop",
 		Content:  stopHelp,
-		Related:  []string{"start", "status"},
-		SeeAlso:  []string{"IPC protocol", "Socket management"},
 	},
 	"status": {
 		Name:     "status",
 		Category: "Monitoring",
-		Synopsis: "Display current state of panels and prisms",
+		Synopsis: "Show panel status",
 		Usage:    "shine status",
 		Content:  statusHelp,
-		Related:  []string{"start", "stop", "logs"},
-		SeeAlso:  []string{"MRU ordering", "Process states"},
 	},
 	"reload": {
 		Name:     "reload",
 		Category: "Configuration",
-		Synopsis: "Reload configuration without restarting",
+		Synopsis: "Reload configuration",
 		Usage:    "shine reload",
 		Content:  reloadHelp,
-		Related:  []string{"start", "status"},
-		SeeAlso:  []string{"SIGHUP behavior", "Hot-reload limitations"},
 	},
 	"logs": {
 		Name:     "logs",
 		Category: "Monitoring",
-		Synopsis: "View service and panel log files",
+		Synopsis: "View logs",
 		Usage:    "shine logs [panel-id]",
 		Content:  logsHelp,
-		Related:  []string{"status"},
-		SeeAlso:  []string{"Log directory: ~/.local/share/shine/logs/"},
 	},
 }
 

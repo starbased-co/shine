@@ -70,34 +70,34 @@ Behavior:
 ## EXAMPLES
 
 ```bash
-$ SOCK=$(ls -t /run/user/$(id -u)/shine/prism-*.sock | head -1)
+$ SOCK=/run/user/$(id -u)/shine/prism-clock.sock
 $ echo '{"action":"status"}' | socat - UNIX-CONNECT:$SOCK
 ```
 
 ```bash
-$ SOCK=$(ls -t /run/user/$(id -u)/shine/prism-panel-0.*.sock | head -1)
-$ echo '{"action":"start","prism":"shine-clock"}' | socat - UNIX-CONNECT:$SOCK
+$ SOCK=/run/user/$(id -u)/shine/prism-bar.sock
+$ echo '{"action":"start","prism":"shine-spotify"}' | socat - UNIX-CONNECT:$SOCK
 ```
 
 ```bash
-$ SOCK=$(ls -t /run/user/$(id -u)/shine/prism-*.sock | head -1)
+$ SOCK=/run/user/$(id -u)/shine/prism-chat.sock
 $ echo '{"action":"kill","prism":"shine-chat"}' | socat - UNIX-CONNECT:$SOCK
 ```
 
-## SOCKET DISCOVERY
+## SOCKET PATHS
 
-Always find the current socket before sending commands:
+Socket paths are deterministic based on prism name (instance):
 
 ```bash
-# Find most recent socket
-SOCK=$(ls -t /run/user/$(id -u)/shine/prism-*.sock | head -1)
+# Direct path by prism name
+SOCK=/run/user/$(id -u)/shine/prism-clock.sock
 
-# Or find by component name
-SOCK=$(ls -t /run/user/$(id -u)/shine/prism-test-prism.*.sock | head -1)
+# Or list all prismctl sockets
+ls /run/user/$(id -u)/shine/prism-*.sock
 ```
 
-Each prismctl instance creates a socket with its PID in the name.
-When prismctl restarts, the old socket is removed and a new one is created.
+Each prism instance has a unique socket. When prismctl restarts, the old socket
+is removed and a new one is created at the same path.
 
 ## LEARN MORE
   Use `prismctl help usage` for main usage.
