@@ -109,6 +109,9 @@ ls /run/user/$(id -u)/shine/prism-*.sock
 
 ```bash
 # Build all binaries
+make build
+
+# Or individually:
 go build -o bin/shine ./cmd/shine
 go build -o bin/shinectl ./cmd/shinectl
 go build -o bin/prismctl ./cmd/prismctl
@@ -123,22 +126,28 @@ go build -o bin/bar ./cmd/prisms/bar
 
 ```bash
 # Run all tests
-go test ./...
+make test
+
+# Or:
+go test ./cmd/... ./pkg/...
 
 # Run with verbose output
-go test -v ./pkg/config ./pkg/panel ./pkg/prism
+go test -v ./pkg/config ./pkg/panel
 
 # Run with coverage
 go test -cover ./...
 
 # Integration tests (requires Kitty with remote control)
-go test -v ./pkg/panel -tags=integration
+make test-integration
 ```
 
 ### Running Locally
 
 ```bash
 # Install to PATH for testing
+make install
+
+# Or add bin/ to PATH temporarily
 export PATH="$PWD/bin:$PATH"
 
 # Start service
@@ -262,8 +271,6 @@ The CLI help system uses a **hybrid approach**:
 - Shell completion: `shine help --json names` provides command list
 - IDE integration: JSON metadata for hover text and autocomplete
 - Future: Man page generation, HTML docs, interactive TUI help browser
-
-The help system uses embedded markdown files (cmd/shine/help/*.md) rendered with Glamour, plus structured metadata in help_metadata.go for programmatic access.
 
 ### Configuration System
 
@@ -476,7 +483,6 @@ prismctl preserves terminal state when switching surfaces:
 
 - **README.md**: User-facing overview, installation, usage
 - **docs/QUICKSTART.md**: 5-minute getting started guide
-- **docs/PHASE2-3-IMPLEMENTATION.md**: Detailed implementation report for Phase 2 & 3
 - **docs/configuration.md**: Complete configuration reference
 - **cmd/shine/help/*.md**: Embedded help content rendered with Glamour
 - **cmd/shine/help_metadata.go**: Structured metadata for help system
@@ -485,10 +491,10 @@ prismctl preserves terminal state when switching surfaces:
 - **examples/completion.zsh**: zsh shell completion script
 - **examples/completion.bash**: bash shell completion script
 - **docs/llms/**: LLM-optimized documentation (Charm ecosystem, Hyprland, etc.)
+- **docs/tour.md**: Comprehensive tour of the codebase
+- **docs/ipc.md**: IPC protocol documentation
 
 ## Known Limitations
-
-From architecture (Phase 4 future work):
 
 - No eviction policy - unlimited background light sources
 - No persistence - MRU list lost on prismctl restart
