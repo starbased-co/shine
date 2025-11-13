@@ -6,15 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 // DefaultConfigPath returns the default configuration file path
 func DefaultConfigPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".config", "shine", "shine.toml")
+	return paths.DefaultConfigPath()
 }
 
 // Load loads configuration from the given file path and discovers prisms

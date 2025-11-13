@@ -1,5 +1,18 @@
 package main
 
+import (
+	_ "embed"
+)
+
+//go:embed help/usage.md
+var usageHelp string
+
+//go:embed help/ipc.md
+var ipcHelp string
+
+//go:embed help/signals.md
+var signalsHelp string
+
 // CommandHelp defines structured metadata for help topics
 type CommandHelp struct {
 	Name        string   // Topic name

@@ -10,34 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/starbased-co/shine/pkg/ipc"
+	"github.com/starbased-co/shine/pkg/paths"
 )
-
-// ipcCommand represents a command sent via IPC
-type ipcCommand struct {
-	Action string `json:"action"` // "start", "kill", "status", "stop"
-	Prism  string `json:"prism"`  // Prism name for start/kill action
-}
-
-// ipcResponse represents a response from IPC
-type ipcResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-// statusResponse represents the status command response
-type statusResponse struct {
-	Foreground string        `json:"foreground"`
-	Background []string      `json:"background"`
-	Prisms     []prismStatus `json:"prisms"`
-}
-
-// prismStatus represents individual prism status
-type prismStatus struct {
-	Name  string `json:"name"`
-	PID   int    `json:"pid"`
-	State string `json:"state"` // "foreground" or "background"
-}
 
 // ipcServer manages the Unix socket IPC server
 type ipcServer struct {
@@ -51,8 +27,7 @@ type ipcServer struct {
 // newIPCServer creates a new IPC server
 func newIPCServer(instance string, supervisor *supervisor) (*ipcServer, error) {
 	// Use XDG runtime directory
-	uid := os.Getuid()
-	runtimeDir := fmt.Sprintf("/run/user/%d/shine", uid)
+	runtimeDir := paths.RuntimeDir()
 
 	// Create directory if needed
 	if err := os.MkdirAll(runtimeDir, 0700); err != nil {
@@ -63,7 +38,7 @@ func newIPCServer(instance string, supervisor *supervisor) (*ipcServer, error) {
 	instanceName := filepath.Base(instance)
 
 	// Socket path
-	socketPath := filepath.Join(runtimeDir, fmt.Sprintf("prism-%s.sock", instanceName))
+	socketPath := paths.PrismSocket(instanceName)
 
 	// Remove stale socket if exists
 	_ = os.Remove(socketPath)
@@ -132,7 +107,7 @@ func (s *ipcServer) handleConnection(conn net.Conn) {
 	}
 
 	// Parse command
-	var cmd ipcCommand
+	var cmd ipc.Command
 	if err := json.Unmarshal([]byte(strings.TrimSpace(line)), &cmd); err != nil {
 		s.sendError(conn, fmt.Sprintf("invalid JSON: %v", err))
 		return
@@ -154,7 +129,7 @@ func (s *ipcServer) handleConnection(conn net.Conn) {
 }
 
 // handleStart processes a start command (idempotent launch/resume)
-func (s *ipcServer) handleStart(conn net.Conn, cmd ipcCommand) {
+func (s *ipcServer) handleStart(conn net.Conn, cmd ipc.Command) {
 	if cmd.Prism == "" {
 		s.sendError(conn, "prism name required for start action")
 		return
@@ -171,7 +146,7 @@ func (s *ipcServer) handleStart(conn net.Conn, cmd ipcCommand) {
 }
 
 // handleKill processes a kill command
-func (s *ipcServer) handleKill(conn net.Conn, cmd ipcCommand) {
+func (s *ipcServer) handleKill(conn net.Conn, cmd ipc.Command) {
 	if cmd.Prism == "" {
 		s.sendError(conn, "prism name required for kill action")
 		return
@@ -195,7 +170,7 @@ func (s *ipcServer) handleStatus(conn net.Conn) {
 	// Build status response
 	foreground := ""
 	background := []string{}
-	prisms := []prismStatus{}
+	prisms := []ipc.PrismStatus{}
 
 	for i, p := range s.supervisor.prismList {
 		state := "background"
@@ -206,14 +181,14 @@ func (s *ipcServer) handleStatus(conn net.Conn) {
 			background = append(background, p.name)
 		}
 
-		prisms = append(prisms, prismStatus{
+		prisms = append(prisms, ipc.PrismStatus{
 			Name:  p.name,
 			PID:   p.pid,
 			State: state,
 		})
 	}
 
-	data := statusResponse{
+	data := ipc.StatusResponse{
 		Foreground: foreground,
 		Background: background,
 		Prisms:     prisms,
@@ -233,7 +208,7 @@ func (s *ipcServer) handleStop(conn net.Conn) {
 
 // sendSuccess sends a success response
 func (s *ipcServer) sendSuccess(conn net.Conn, message string, data any) {
-	resp := ipcResponse{
+	resp := ipc.Response{
 		Success: true,
 		Message: message,
 		Data:    data,
@@ -243,7 +218,7 @@ func (s *ipcServer) sendSuccess(conn net.Conn, message string, data any) {
 
 // sendError sends an error response
 func (s *ipcServer) sendError(conn net.Conn, message string) {
-	resp := ipcResponse{
+	resp := ipc.Response{
 		Success: false,
 		Message: message,
 	}
@@ -251,7 +226,7 @@ func (s *ipcServer) sendError(conn net.Conn, message string) {
 }
 
 // sendResponse sends a JSON response
-func (s *ipcServer) sendResponse(conn net.Conn, resp ipcResponse) {
+func (s *ipcServer) sendResponse(conn net.Conn, resp ipc.Response) {
 	data, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshaling response: %v", err)

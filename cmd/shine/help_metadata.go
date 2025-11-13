@@ -1,5 +1,24 @@
 package main
 
+import (
+	_ "embed"
+)
+
+//go:embed help/start.md
+var startHelp string
+
+//go:embed help/stop.md
+var stopHelp string
+
+//go:embed help/status.md
+var statusHelp string
+
+//go:embed help/reload.md
+var reloadHelp string
+
+//go:embed help/logs.md
+var logsHelp string
+
 // CommandHelp defines structured metadata for command help
 type CommandHelp struct {
 	Name     string // Command name

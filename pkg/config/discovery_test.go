@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 func TestDiscoverDirectoryPrism(t *testing.T) {
@@ -329,7 +331,7 @@ func TestExpandPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := expandPath(tt.input)
+			result := paths.ExpandHome(tt.input)
 			if tt.contains != "" && len(result) > 0 {
 				// Basic check that path was processed
 				if tt.input == "~" && result == "~" {

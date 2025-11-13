@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/starbased-co/shine/pkg/config"
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 const version = "0.1.0"
@@ -58,18 +61,47 @@ func main() {
 	// Determine config path
 	cfgPath := *configPath
 	if cfgPath == "" {
-		cfgPath = DefaultConfigPath()
+		cfgPath = config.DefaultConfigPath()
 	}
 
 	log.Printf("Loading configuration from: %s", cfgPath)
 
-	// Load config
-	config := LoadConfigOrDefault(cfgPath)
-	if err := config.Validate(); err != nil {
+	// Load config using pkg/config (with prism discovery)
+	pkgCfg, err := config.Load(cfgPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Validate base configuration
+	if err := pkgCfg.Validate(); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
 
-	log.Printf("Loaded configuration with %d prism(s)", len(config.Prisms))
+	// Convert to PrismEntry slice for shinectl
+	prismEntries := make([]*PrismEntry, 0)
+	for name, pc := range pkgCfg.Prisms {
+		if !pc.Enabled || pc.ResolvedPath == "" {
+			log.Printf("Skipping prism %q: enabled=%v, resolved=%q", name, pc.Enabled, pc.ResolvedPath)
+			continue
+		}
+
+		entry := &PrismEntry{
+			PrismConfig: pc,
+			// Restart policies default to "no"
+			Restart:      "no",
+			RestartDelay: "1s",
+			MaxRestarts:  0,
+		}
+
+		// Validate restart policy
+		if err := entry.ValidateRestartPolicy(); err != nil {
+			log.Fatalf("Invalid restart policy for prism %q: %v", name, err)
+		}
+
+		prismEntries = append(prismEntries, entry)
+	}
+
+	log.Printf("Loaded configuration with %d prism(s)", len(prismEntries))
 
 	// Create panel manager
 	pm, err := NewPanelManager()
@@ -78,7 +110,7 @@ func main() {
 	}
 
 	// Spawn initial panels
-	if err := spawnConfiguredPanels(pm, config); err != nil {
+	if err := spawnConfiguredPanels(pm, prismEntries); err != nil {
 		log.Fatalf("Failed to spawn panels: %v", err)
 	}
 
@@ -119,12 +151,7 @@ func main() {
 
 // setupLogging configures logging to file
 func setupLogging() *os.File {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatalf("Failed to get home directory: %v", err)
-	}
-
-	logDir := filepath.Join(home, ".local", "share", "shine", "logs")
+	logDir := paths.LogDir()
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		log.Fatalf("Failed to create log directory: %v", err)
 	}
@@ -143,16 +170,17 @@ func setupLogging() *os.File {
 }
 
 // spawnConfiguredPanels spawns panels for all prisms in config
-func spawnConfiguredPanels(pm *PanelManager, config *Config) error {
-	for _, prism := range config.Prisms {
+func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry) error {
+	for _, entry := range entries {
 		// Use prism name as instance name for kitty --instance-group
-		instanceName := prism.Name
+		instanceName := entry.Name
 
-		log.Printf("Spawning panel for prism: %s (instance: %s)", prism.Name, instanceName)
+		log.Printf("Spawning panel for prism: %s (instance: %s, binary: %s)",
+			entry.Name, instanceName, entry.ResolvedPath)
 
-		panel, err := pm.SpawnPanel(&prism, instanceName)
+		panel, err := pm.SpawnPanel(entry, instanceName)
 		if err != nil {
-			return fmt.Errorf("failed to spawn panel for %s: %w", prism.Name, err)
+			return fmt.Errorf("failed to spawn panel for %s: %w", entry.Name, err)
 		}
 
 		log.Printf("Panel spawned successfully: %s (socket: %s)",
@@ -166,10 +194,36 @@ func spawnConfiguredPanels(pm *PanelManager, config *Config) error {
 func reloadConfig(pm *PanelManager, configPath string) error {
 	log.Println("Reloading configuration...")
 
-	// Load new config
-	newConfig := LoadConfigOrDefault(configPath)
-	if err := newConfig.Validate(); err != nil {
+	// Load new config using pkg/config
+	pkgCfg, err := config.Load(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if err := pkgCfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	// Convert to PrismEntry slice
+	newEntries := make([]*PrismEntry, 0)
+	for name, pc := range pkgCfg.Prisms {
+		if !pc.Enabled || pc.ResolvedPath == "" {
+			continue
+		}
+
+		entry := &PrismEntry{
+			PrismConfig:  pc,
+			Restart:      "no",
+			RestartDelay: "1s",
+			MaxRestarts:  0,
+		}
+
+		if err := entry.ValidateRestartPolicy(); err != nil {
+			log.Printf("Invalid restart policy for prism %q: %v", name, err)
+			continue
+		}
+
+		newEntries = append(newEntries, entry)
 	}
 
 	// Get current panels
@@ -183,8 +237,8 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 
 	// Build map of new prism names
 	newPrisms := make(map[string]*PrismEntry)
-	for _, prism := range newConfig.Prisms {
-		newPrisms[prism.Name] = &prism
+	for _, entry := range newEntries {
+		newPrisms[entry.Name] = entry
 	}
 
 	// Remove panels that are no longer in config
@@ -198,14 +252,14 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 	}
 
 	// Add new panels
-	for name, prism := range newPrisms {
+	for name, entry := range newPrisms {
 		if _, exists := currentPrisms[name]; !exists {
 			// Use prism name as instance name
-			instanceName := prism.Name
+			instanceName := entry.Name
 
 			log.Printf("Adding new panel for prism: %s (instance: %s)", name, instanceName)
 
-			panel, err := pm.SpawnPanel(prism, instanceName)
+			panel, err := pm.SpawnPanel(entry, instanceName)
 			if err != nil {
 				log.Printf("Failed to spawn panel for %s: %v", name, err)
 				continue

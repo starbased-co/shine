@@ -30,6 +30,10 @@ devenv.local.nix
 tmp/
 build-errors.log
 
+# Runtime logs
+logs/
+*.log
+
 # IDE
 .idea/
 .vscode/

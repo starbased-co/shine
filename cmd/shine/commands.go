@@ -10,12 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/starbased-co/shine/pkg/ipc"
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 // findShinectlSocket finds the shinectl socket path
 func findShinectlSocket() (string, error) {
-	uid := os.Getuid()
-	socketsDir := fmt.Sprintf("/run/user/%d/shine", uid)
+	socketsDir := paths.RuntimeDir()
 
 	// Look for shine.*.sock
 	pattern := filepath.Join(socketsDir, "shine.*.sock")
@@ -34,8 +36,7 @@ func findShinectlSocket() (string, error) {
 
 // findPrismctlSockets finds all prismctl sockets
 func findPrismctlSockets() ([]string, error) {
-	uid := os.Getuid()
-	socketsDir := fmt.Sprintf("/run/user/%d/shine", uid)
+	socketsDir := paths.RuntimeDir()
 
 	pattern := filepath.Join(socketsDir, "prism-*.sock")
 	matches, err := filepath.Glob(pattern)
@@ -46,35 +47,8 @@ func findPrismctlSockets() ([]string, error) {
 	return matches, nil
 }
 
-// ipcCommand represents a command to send via IPC
-type ipcCommand struct {
-	Action string `json:"action"`
-	Prism  string `json:"prism,omitempty"`
-}
-
-// ipcResponse represents a response from IPC
-type ipcResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-// statusResponse represents the status command response from prismctl
-type statusResponse struct {
-	Foreground string        `json:"foreground"`
-	Background []string      `json:"background"`
-	Prisms     []prismStatus `json:"prisms"`
-}
-
-// prismStatus represents individual prism status
-type prismStatus struct {
-	Name  string `json:"name"`
-	PID   int    `json:"pid"`
-	State string `json:"state"`
-}
-
 // sendIPCCommand sends a command to a Unix socket and returns the response
-func sendIPCCommand(socketPath string, cmd ipcCommand) (*ipcResponse, error) {
+func sendIPCCommand(socketPath string, cmd ipc.Command) (*ipc.Response, error) {
 	conn, err := net.DialTimeout("unix", socketPath, 5*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %w", err)
@@ -91,7 +65,7 @@ func sendIPCCommand(socketPath string, cmd ipcCommand) (*ipcResponse, error) {
 
 	// Read response
 	reader := bufio.NewReader(conn)
-	var resp ipcResponse
+	var resp ipc.Response
 	decoder := json.NewDecoder(reader)
 	if err := decoder.Decode(&resp); err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
@@ -159,7 +133,7 @@ func cmdStop() error {
 		instanceName := extractInstanceName(socket)
 		Muted(fmt.Sprintf("Stopping %s...", instanceName))
 
-		cmd := ipcCommand{Action: "stop"}
+		cmd := ipc.Command{Action: "stop"}
 		_, err := sendIPCCommand(socket, cmd)
 		if err != nil {
 			Warning(fmt.Sprintf("Failed to stop %s: %v", instanceName, err))
@@ -208,7 +182,7 @@ func cmdStatus() error {
 		fmt.Printf("%s %s\n", styleMuted.Render("Socket:"), socket)
 
 		// Query status
-		cmd := ipcCommand{Action: "status"}
+		cmd := ipc.Command{Action: "status"}
 		resp, err := sendIPCCommand(socket, cmd)
 		if err != nil {
 			Error(fmt.Sprintf("Failed to query: %v", err))
@@ -222,7 +196,7 @@ func cmdStatus() error {
 
 		// Parse status data
 		dataBytes, _ := json.Marshal(resp.Data)
-		var status statusResponse
+		var status ipc.StatusResponse
 		if err := json.Unmarshal(dataBytes, &status); err != nil {
 			Error(fmt.Sprintf("Failed to parse status: %v", err))
 			continue

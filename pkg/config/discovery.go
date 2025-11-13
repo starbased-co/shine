@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 // PrismSource represents where a prism configuration was discovered
@@ -35,7 +36,7 @@ func DiscoverPrisms(prismDirs []string) (map[string]*DiscoveredPrism, error) {
 
 	for _, baseDir := range prismDirs {
 		// Expand home directory
-		expandedDir := expandPath(baseDir)
+		expandedDir := paths.ExpandHome(baseDir)
 
 		// Check if directory exists
 		if _, err := os.Stat(expandedDir); os.IsNotExist(err) {
@@ -178,7 +179,7 @@ func loadPrismConfig(path string) (*PrismConfig, error) {
 
 // loadShineConfig loads the main shine.toml configuration
 func loadShineConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(expandPath(path))
+	data, err := os.ReadFile(paths.ExpandHome(path))
 	if err != nil {
 		return nil, err
 	}
@@ -279,20 +280,3 @@ func isExecutable(path string) bool {
 	return !info.IsDir() && (info.Mode()&0111 != 0)
 }
 
-// expandPath expands ~ to home directory
-func expandPath(path string) string {
-	if len(path) == 0 || path[0] != '~' {
-		return path
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return path
-	}
-
-	if len(path) == 1 {
-		return home
-	}
-
-	return filepath.Join(home, path[1:])
-}

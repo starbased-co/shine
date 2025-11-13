@@ -10,14 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Architecture
 
-### The Optical Metaphor
+### Terminology
 
-**Prisms** are the Kitty panels equipped with `prismctl`. Each prism can hold multiple light sources (TUI child processes) and refract one to the user at a time through its surface.
+The project name derives from an optical metaphor but the architecture is described in standard process supervision terms:
 
 - **Panel** = The Kitty layer shell window spawned by `shinectl`
-- **Prism** = Panel + `prismctl` supervisor (the refracting container)
-- **Light Sources** = TUI child processes (e.g., `clock`, `chat`, `bar`) that beam their output
-- **Surface** = The bidirectional I/O mechanism that refracts light from the active source to the user
+- **Prism** = Panel + `prismctl` supervisor process
+- **Child Processes** = TUI applications (e.g., `clock`, `chat`, `bar`) managed by the supervisor
+- **Surface** = The bidirectional I/O relay between the real PTY and the active child's PTY
 
 ```
 ┌─────────────────┐
@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
                │   PTY1   ││   PTY2   ││  *PTY3   │ <- Child PTYs (* = active/foreground)
                └────┬─────┘└────┬─────┘└────┬─────┘
                ┌────┴─────┐┌────┴─────┐┌────┴─────┐
-               │  clock   ││  wabar   ││   app3   │ <- TUI processes (light sources)
+               │  clock   ││  wabar   ││   app3   │ <- TUI child processes
                └──────────┘└──────────┘└──────────┘
                 background   background   FOREGROUND
 ```
@@ -55,11 +55,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. User runs `shine start` → spawns `shinectl` in background
 2. `shinectl` reads `prism.toml` and spawns Kitty panels via remote control
-3. Each Kitty panel launches `prismctl` as its command (the prism supervisor)
-4. `prismctl` allocates PTYs and forks TUI child processes (light sources)
+3. Each Kitty panel launches `prismctl` as its command (the supervisor process)
+4. `prismctl` allocates PTYs and forks TUI child processes
 5. The surface relays I/O between Real PTY and the active child's PTY
-6. MRU ordering: most recent child stays foreground, others continue running in background
-7. Hot-swap: `prismctl` can switch which light source is refracted through the surface
+6. MRU ordering: most recently used child remains in foreground, others run in background
+7. Hot-swap: `prismctl` can switch which child process receives I/O relay
 
 ### Three-Tier System
 
@@ -69,21 +69,21 @@ shine (user CLI)
 shinectl (service manager)
   ↓ spawns Kitty panels via remote control
 kitten panel [prismctl panel-name]
-  ↓ prismctl is the prism (container + supervisor)
-Light sources (TUI processes)
-  ↓ one source at a time is refracted through the surface
+  ↓ prismctl supervisor process
+TUI child processes
+  ↓ active child receives I/O relay via surface
 User's terminal
 ```
 
 **shine**: User-facing CLI (`start`, `stop`, `reload`, `status`, `logs`)
 **shinectl**: Service manager that reads config and launches `kitten panel` processes with `prismctl` as the command
-**prismctl**: The prism - supervisor that manages multiple TUI child processes (light sources) and refracts one to the user via the surface
-**Light Sources**: Individual TUI applications (e.g., `clock`, `chat`, `bar`) that run as children of prismctl
+**prismctl**: Process supervisor that manages multiple TUI child processes and relays I/O to the active child via the surface
+**Child Processes**: Individual TUI applications (e.g., `clock`, `chat`, `bar`) that run as children of prismctl
 
 ### Critical Behaviors
 
-- **Background processing**: All TUI light sources continue running, only I/O relay switches
-- **MRU ordering**: Most recently used light source gets I/O relay, others continue in background
+- **Background processing**: All TUI child processes continue running, only I/O relay switches
+- **MRU ordering**: Most recently used child gets I/O relay, others continue in background
 - **Crash recovery**: Restart policies (no, on-failure, unless-stopped, always)
 - **Hot-reload**: SIGHUP to shinectl reloads config without disrupting panels
 - **IPC**: JSON over Unix sockets (`/run/user/{uid}/shine/prism-{instance}.sock`)
@@ -496,11 +496,11 @@ prismctl preserves terminal state when switching surfaces:
 
 ## Known Limitations
 
-- No eviction policy - unlimited background light sources
+- No eviction policy - unlimited background child processes
 - No persistence - MRU list lost on prismctl restart
-- No light source tagging (pin/evict)
-- No memory limits - background light sources consume full memory
-- No per-light-source logs yet (only shinectl.log)
+- No child process tagging (pin/evict)
+- No memory limits - background processes consume full memory
+- No per-process logs yet (only shinectl.log)
 - Config reload requires manual SIGHUP (no `shine reload` IPC yet)
 
 ## Version Information

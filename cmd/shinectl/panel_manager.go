@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/starbased-co/shine/pkg/ipc"
+	"github.com/starbased-co/shine/pkg/paths"
 )
 
 // Panel represents a spawned Kitty panel running prismctl
@@ -17,9 +20,8 @@ type Panel struct {
 	Instance   string       // Instance name for socket (e.g., "clock", "bar")
 	WindowID   string       // Kitty window ID
 	SocketPath string       // Path to prismctl Unix socket
-	IPCClient  *IPCClient   // IPC client for communication
+	IPCClient  *ipc.Client  // IPC client for communication
 	Config     *PrismEntry  // Configuration from prism.toml
-	PID        int          // prismctl process PID (deprecated - not tracked)
 	CrashCount int          // Crash counter for restart policy
 	LastCrash  time.Time    // Last crash timestamp
 }
@@ -104,8 +106,7 @@ func (pm *PanelManager) SpawnPanel(config *PrismEntry, instanceName string) (*Pa
 	log.Printf("Spawned panel %s (window ID: %s) for prism %s", instanceName, windowID, config.Name)
 
 	// Build socket path (will be created by prismctl)
-	uid := os.Getuid()
-	socketPath := fmt.Sprintf("/run/user/%d/shine/prism-%s.sock", uid, instanceName)
+	socketPath := paths.PrismSocket(instanceName)
 
 	// Wait for prismctl to create socket (up to 5 seconds)
 	for i := 0; i < 50; i++ {
@@ -125,9 +126,8 @@ func (pm *PanelManager) SpawnPanel(config *PrismEntry, instanceName string) (*Pa
 		Instance:   instanceName,
 		WindowID:   windowID,
 		SocketPath: socketPath,
-		IPCClient:  NewIPCClient(socketPath),
+		IPCClient:  ipc.NewClient(socketPath),
 		Config:     config,
-		PID:        0, // PID not tracked via socket name anymore
 		CrashCount: 0,
 	}
 
@@ -192,7 +192,7 @@ func (pm *PanelManager) MonitorPanels() {
 
 	for _, panel := range panels {
 		if !pm.CheckHealth(panel) {
-			log.Printf("Panel %s (PID %d) is not responsive", panel.Instance, panel.PID)
+			log.Printf("Panel %s is not responsive", panel.Instance)
 			pm.handlePanelCrash(panel)
 		}
 	}
@@ -259,7 +259,7 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 			newPanel.CrashCount = panel.CrashCount
 			newPanel.LastCrash = panel.LastCrash
 
-			log.Printf("Successfully restarted panel %s (PID %d)", panel.Instance, newPanel.PID)
+			log.Printf("Successfully restarted panel %s", panel.Instance)
 		}()
 	}
 }
@@ -290,8 +290,7 @@ func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, instanceName stri
 	}
 
 	// Wait for socket
-	uid := os.Getuid()
-	socketPath := fmt.Sprintf("/run/user/%d/shine/prism-%s.sock", uid, instanceName)
+	socketPath := paths.PrismSocket(instanceName)
 
 	// Wait for prismctl to create socket (up to 5 seconds)
 	for i := 0; i < 50; i++ {
@@ -311,9 +310,8 @@ func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, instanceName stri
 		Instance:   instanceName,
 		WindowID:   windowID,
 		SocketPath: socketPath,
-		IPCClient:  NewIPCClient(socketPath),
+		IPCClient:  ipc.NewClient(socketPath),
 		Config:     config,
-		PID:        0, // PID not tracked via socket name anymore
 		CrashCount: 0,
 	}
 
