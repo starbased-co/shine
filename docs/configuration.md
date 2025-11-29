@@ -231,61 +231,6 @@ Binary resolution:
 
 - Always searches system PATH (no local directory to check)
 
-## Loading Failures and Defaults
-
-The system gracefully handles missing or invalid configurations:
-
-### Missing shine.toml
-
-- `config.Load()` returns an error
-- `config.LoadOrDefault()` returns a default config with empty prisms
-- Prism discovery still happens if `core.path` is set
-
-### Missing prism.toml
-
-Directory-based prisms require a `prism.toml` manifest:
-
-- If missing, the directory is skipped
-- No error is raised (graceful degradation)
-
-### Malformed TOML
-
-If a TOML file has syntax errors:
-
-- Parsing error is returned
-- Prism discovery continues with other sources
-- `config.Load()` fails; `config.LoadOrDefault()` falls back to defaults
-
-### Unresolved Binary
-
-If a prism's binary cannot be found:
-
-- `ResolvedPath` remains empty
-- The prism is marked as disabled (not spawned)
-- Discovery continues; no error is raised
-
-## Validation
-
-Configuration validation happens in `pkg/config/validation.go`:
-
-```go
-func (c *Config) Validate() error
-func (pc *PrismConfig) Validate() error
-func ValidateRestartPolicy(policy string) error
-func ValidateRestartDelay(delay string) error
-```
-
-Validated fields:
-
-- Origin values (must be recognized)
-- Position format ("x,y")
-- Width/height dimensions ("100px", "50%")
-- Focus policy values
-- Restart policy strings
-- Restart delay duration format
-
-Invalid configurations log a warning but don't block loading.
-
 ## Runtime Changes
 
 ### Hot-Reload (SIGHUP)
@@ -296,29 +241,8 @@ Send SIGHUP to shinectl to reload configuration:
 pkill -HUP shinectl
 ```
 
-This:
-
 1. Reloads shine.toml
 2. Rediscovers prisms
 3. Spawns new prisms
 4. Stops removed prisms
 5. Preserves existing prism state (doesn't restart)
-
-### Path Expansion
-
-All paths support `~` expansion:
-
-- `~/.config/shine` → `/home/user/.config/shine`
-- `~/bin` → `/home/user/bin`
-
-Handled by `pkg/paths/ExpandHome()`.
-
-## Summary
-
-The configuration system is designed for flexibility:
-
-1. **Multiple sources**: shine.toml + prism manifests + standalone files
-2. **Sensible defaults**: Prism source provides defaults; users override as needed
-3. **Progressive discovery**: Gracefully skips missing or invalid configs
-4. **Hot-reload**: SIGHUP reloads without disrupting running prisms
-5. **Clear precedence**: User overrides always win for positioning/behavior
