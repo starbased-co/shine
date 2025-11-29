@@ -7,7 +7,6 @@ git clone --no-local . /tmp/shine-public
 cd /tmp/shine-public
 
 git filter-repo --invert-paths \
-  --path CLAUDE.md \
   --path .claude/ \
   --path docs/llms/ \
   --path .env \

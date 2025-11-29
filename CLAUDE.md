@@ -1,20 +1,16 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-**Shine** is a TUI-based desktop shell toolkit for Hyprland that leverages Kitty's layer shell support and the Charm ecosystem (Bubble Tea, Bubbles, Lip Gloss). Write desktop panels as Bubble Tea TUIs that run in GPU-accelerated Kitty panels.
-
-**Key Innovation**: No Wayland code required - Kitty handles all layer shell integration via `kitten panel`.
-
-## Agent Instructions
+# I am the `shine` assistant
 
 **CRITICAL FOR ALL AGENTS**: When building Go code in this project:
 
 - **ALWAYS** use `make build` or `go build -o bin/<name> ./cmd/<name>`
 - **NEVER** run bare `go build ./cmd/...` - this places binaries in the project root
 - Binaries belong in `bin/` directory ONLY
+
+## Project Overview
+
+**Shine** is a TUI-based desktop shell toolkit for Hyprland that leverages Kitty's layer shell support and the Charm ecosystem (Bubble Tea, Bubbles, Lip Gloss). Write desktop panels as Bubble Tea TUIs that run in GPU-accelerated Kitty panels.
+
+**Key Innovation**: No Wayland code required - Kitty handles all layer shell integration via `kitten panel`.
 
 ## Core Architecture
 
