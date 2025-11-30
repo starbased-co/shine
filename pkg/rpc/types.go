@@ -102,7 +102,7 @@ type ShutdownResult struct {
 	ShuttingDown bool `json:"shutting_down"`
 }
 
-// shinectl RPC types (shine.sock)
+// shined RPC types (shine.sock)
 
 // PanelListResult is the response for panel/list
 type PanelListResult struct {
@@ -143,7 +143,7 @@ type ConfigReloadResult struct {
 	Errors   []string `json:"errors,omitempty"`
 }
 
-// Notification types (prismctl → shinectl)
+// Notification types (prismctl → shined)
 
 // PrismStartedNotification is sent when a prism starts
 type PrismStartedNotification struct {

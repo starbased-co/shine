@@ -32,7 +32,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Handle help command
 	if *helpTopic != "" || flag.NArg() > 0 && flag.Arg(0) == "help" {
 		topic := *helpTopic
 		if topic == "" && flag.NArg() > 1 {
@@ -43,13 +42,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Setup logging
 	logFile := setupLogging()
 	defer logFile.Close()
 
 	log.Printf("shined v%s starting", version)
 
-	// Determine config path
 	cfgPath := *configPath
 	if cfgPath == "" {
 		cfgPath = config.DefaultConfigPath()
@@ -63,7 +60,6 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Validate base configuration
 	if err := pkgCfg.Validate(); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
@@ -84,7 +80,6 @@ func main() {
 			MaxRestarts:  0,
 		}
 
-		// Validate restart policy
 		if err := entry.ValidateRestartPolicy(); err != nil {
 			log.Fatalf("Invalid restart policy for prism %q: %v", name, err)
 		}
@@ -94,35 +89,29 @@ func main() {
 
 	log.Printf("Loaded configuration with %d prism(s)", len(prismEntries))
 
-	// Create state manager
 	stateMgr, err := newStateManager()
 	if err != nil {
 		log.Fatalf("Failed to create state manager: %v", err)
 	}
 	defer stateMgr.Close()
 
-	// Create panel manager
 	pm, err := NewPanelManager()
 	if err != nil {
 		log.Fatalf("Failed to create panel manager: %v", err)
 	}
 
-	// Start RPC server
 	if err := startRPCServer(pm, stateMgr, cfgPath); err != nil {
 		log.Fatalf("Failed to start RPC server: %v", err)
 	}
 	defer stopRPCServer()
 
-	// Spawn initial panels
 	if err := spawnConfiguredPanels(pm, prismEntries, stateMgr); err != nil {
 		log.Fatalf("Failed to spawn panels: %v", err)
 	}
 
-	// Setup signal handlers
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
 
-	// Health monitoring ticker
 	healthTicker := time.NewTicker(30 * time.Second)
 	defer healthTicker.Stop()
 
@@ -149,13 +138,11 @@ func main() {
 			}
 
 		case <-healthTicker.C:
-			// Periodic health check
 			pm.MonitorPanels()
 		}
 	}
 }
 
-// setupLogging configures logging to file
 func setupLogging() *os.File {
 	logDir := paths.LogDir()
 	if err := os.MkdirAll(logDir, 0755); err != nil {
@@ -175,10 +162,8 @@ func setupLogging() *os.File {
 	return logFile
 }
 
-// spawnConfiguredPanels spawns panels for all prisms in config
 func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry, stateMgr *StateManager) error {
 	for _, entry := range entries {
-		// Use prism name as instance name for kitty --instance-group
 		instanceName := entry.Name
 
 		log.Printf("Spawning panel for prism: %s (instance: %s, binary: %s)",
@@ -189,7 +174,7 @@ func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry, stateMgr *St
 			return fmt.Errorf("failed to spawn panel for %s: %w", entry.Name, err)
 		}
 
-		// Update state
+		// Update state with spawned panel
 		healthy := pm.CheckHealth(panel)
 		stateMgr.OnPanelSpawned(panel.Instance, panel.Name, panel.PID, healthy)
 
@@ -200,7 +185,6 @@ func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry, stateMgr *St
 	return nil
 }
 
-// reloadConfig reloads configuration and updates panels accordingly
 func reloadConfig(pm *PanelManager, configPath string) error {
 	log.Println("Reloading configuration...")
 
@@ -236,22 +220,20 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 		newEntries = append(newEntries, entry)
 	}
 
-	// Get current panels
 	currentPanels := pm.ListPanels()
 
-	// Build map of current prism names
+	// Build maps of current and new prism names and compare
 	currentPrisms := make(map[string]*Panel)
 	for _, panel := range currentPanels {
 		currentPrisms[panel.Name] = panel
 	}
 
-	// Build map of new prism names
 	newPrisms := make(map[string]*PrismEntry)
 	for _, entry := range newEntries {
 		newPrisms[entry.Name] = entry
 	}
 
-	// Remove panels that are no longer in config
+  // kill   = {x ∈ current : x ∉ new}
 	for name, panel := range currentPrisms {
 		if _, exists := newPrisms[name]; !exists {
 			log.Printf("Removing panel for prism %s (no longer in config)", name)
@@ -261,10 +243,9 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 		}
 	}
 
-	// Add new panels
+  // spawn  = {x ∈ new : x ∉ current}
 	for name, entry := range newPrisms {
 		if _, exists := currentPrisms[name]; !exists {
-			// Use prism name as instance name
 			instanceName := entry.Name
 
 			log.Printf("Adding new panel for prism: %s (instance: %s)", name, instanceName)

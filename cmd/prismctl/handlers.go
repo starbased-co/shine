@@ -33,7 +33,7 @@ func newRPCHandlers(sup *supervisor, stateMgr *StateManager) handler.Map {
 	}
 }
 
-// handleConfigure receives app configuration from shinectl and starts apps
+// handleConfigure receives app configuration from shined and starts apps
 func (h *rpcHandlers) handleConfigure(ctx context.Context, req *rpc.ConfigureRequest) (*rpc.ConfigureResult, error) {
 	log.Printf("RPC: prism/configure with %d apps", len(req.Apps))
 

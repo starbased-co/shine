@@ -104,7 +104,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		// Removed KeyCtrlC - desktop widgets shouldn't close on Ctrl+C
-		// Control via shinectl instead
+		// Control via shined instead
 		case tea.KeyEsc:
 			// Clear current input on Esc
 			m.textarea.Reset()

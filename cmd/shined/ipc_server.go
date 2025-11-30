@@ -12,9 +12,8 @@ import (
 
 var rpcServer *rpc.Server
 
-// startRPCServer starts the JSON-RPC 2.0 server for shinectl
 func startRPCServer(pm *PanelManager, stateMgr *StateManager, cfgPath string) error {
-	// Ensure runtime directory exists
+	// ensure directory
 	runtimeDir := paths.RuntimeDir()
 	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
 		return err
@@ -38,7 +37,7 @@ func startRPCServer(pm *PanelManager, stateMgr *StateManager, cfgPath string) er
 		"surface/switched": rpc.Handler(h.handleSurfaceSwitched),
 	}
 
-	rpcServer = rpc.NewServer(paths.ShinectlSocket(), mux, nil)
+	rpcServer = rpc.NewServer(paths.ShinedSocket(), mux, nil)
 	if err := rpcServer.Start(); err != nil {
 		return err
 	}
@@ -47,7 +46,6 @@ func startRPCServer(pm *PanelManager, stateMgr *StateManager, cfgPath string) er
 	return nil
 }
 
-// stopRPCServer stops the RPC server
 func stopRPCServer() {
 	if rpcServer != nil {
 		log.Println("Stopping RPC server")

@@ -41,7 +41,7 @@ type supervisor struct {
 	surfaceCancel context.CancelFunc
 	shuttingDown bool // Flag to prevent double-shutdown
 	stateManager *StateManager // State management for mmap file
-	notifyMgr    *NotificationManager // Notification manager for shinectl
+	notifyMgr    *NotificationManager // Notification manager for shined
 	appPaths     map[string]string // App name → resolved binary path (multi-app mode)
 }
 
@@ -112,16 +112,15 @@ func (s *supervisor) start(prismName string) error {
 }
 
 // launchAndForeground launches a new prism and brings it to foreground
+// Assumes caller holds s.mu lock
 func (s *supervisor) launchAndForeground(prismName string) error {
 	var binaryPath string
 	var err error
 
 	// Check if we have a registered path for this app (multi-app mode)
-	s.mu.Lock()
 	if path, ok := s.appPaths[prismName]; ok && path != "" {
 		binaryPath = path
 	}
-	s.mu.Unlock()
 
 	if binaryPath == "" {
 		// Fall back to LookPath (legacy single-app mode)
@@ -203,7 +202,7 @@ func (s *supervisor) launchAndForeground(prismName string) error {
 		s.stateManager.OnPrismStarted(prismName, pid, true)
 	}
 
-	// Notify shinectl of prism start
+	// Notify shined of prism start
 	if s.notifyMgr != nil {
 		s.notifyMgr.OnPrismStarted(prismName, pid)
 	}
@@ -261,7 +260,7 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 		s.stateManager.OnForegroundChanged(target.name)
 	}
 
-	// Notify shinectl of surface switch
+	// Notify shined of surface switch
 	if s.notifyMgr != nil && len(s.prismList) > 1 {
 		// Previous foreground is now at index [1]
 		previousFg := s.prismList[1].name
@@ -352,7 +351,7 @@ func (s *supervisor) handleChildExit(pid, exitCode int) {
 		s.stateManager.OnPrismStopped(exited.name)
 	}
 
-	// Notify shinectl of prism exit (stopped or crashed)
+	// Notify shined of prism exit (stopped or crashed)
 	if s.notifyMgr != nil {
 		if exitCode == 0 {
 			s.notifyMgr.OnPrismStopped(exited.name, exitCode)

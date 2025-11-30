@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Color scheme
 var (
 	colorSuccess = lipgloss.Color("2")   // Green
 	colorError   = lipgloss.Color("1")   // Red
@@ -16,7 +15,6 @@ var (
 	colorMuted   = lipgloss.Color("240") // Gray
 )
 
-// Styles
 var (
 	styleSuccess = lipgloss.NewStyle().Foreground(colorSuccess).Bold(true)
 	styleError   = lipgloss.NewStyle().Foreground(colorError).Bold(true)
@@ -26,32 +24,26 @@ var (
 	styleBold    = lipgloss.NewStyle().Bold(true)
 )
 
-// Success prints a success message
 func Success(msg string) {
 	fmt.Println(styleSuccess.Render("✓") + " " + msg)
 }
 
-// Error prints an error message
 func Error(msg string) {
 	fmt.Println(styleError.Render("✗") + " " + msg)
 }
 
-// Warning prints a warning message
 func Warning(msg string) {
 	fmt.Println(styleWarning.Render("⚠") + " " + msg)
 }
 
-// Info prints an info message
 func Info(msg string) {
 	fmt.Println(styleInfo.Render("ℹ") + " " + msg)
 }
 
-// Muted prints a muted message
 func Muted(msg string) {
 	fmt.Println(styleMuted.Render(msg))
 }
 
-// Header prints a section header
 func Header(title string) {
 	fmt.Println()
 	fmt.Println(styleBold.Render(title))
@@ -64,7 +56,6 @@ type Table struct {
 	Rows    [][]string
 }
 
-// NewTable creates a new table
 func NewTable(headers ...string) *Table {
 	return &Table{
 		Headers: headers,
@@ -72,12 +63,10 @@ func NewTable(headers ...string) *Table {
 	}
 }
 
-// AddRow adds a row to the table
 func (t *Table) AddRow(values ...string) {
 	t.Rows = append(t.Rows, values)
 }
 
-// Render renders the table to a string
 func (t *Table) Render() string {
 	if len(t.Rows) == 0 {
 		return styleMuted.Render("(no data)")
@@ -130,12 +119,10 @@ func (t *Table) Render() string {
 	return sb.String()
 }
 
-// Print renders and prints the table
 func (t *Table) Print() {
 	fmt.Print(t.Render())
 }
 
-// padRight pads a string to the right with spaces
 func padRight(s string, length int) string {
 	if len(s) >= length {
 		return s
@@ -143,7 +130,6 @@ func padRight(s string, length int) string {
 	return s + strings.Repeat(" ", length-len(s))
 }
 
-// StatusBox renders a status summary box
 func StatusBox(foreground string, backgroundCount int, totalCount int) string {
 	var parts []string
 

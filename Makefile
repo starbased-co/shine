@@ -15,7 +15,7 @@ prismctl:
 prisms:
 	@echo "Building example prisms..."
 	@go build -o bin/shine ./cmd/shine
-	@go build -o bin/shinectl ./cmd/shinectl
+	@go build -o bin/shined ./cmd/shined
 	@go build -o bin/clock ./cmd/prisms/clock
 	@go build -o bin/chat ./cmd/prisms/chat
 	@go build -o bin/bar ./cmd/prisms/bar
@@ -42,7 +42,7 @@ test-all: test test-integration
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f bin/prismctl bin/shine bin/shinectl
+	@rm -f bin/prismctl bin/shine bin/shined
 	@rm -f bin/clock bin/chat bin/bar bin/sysinfo
 	@rm -f test/fixtures/test-prism
 
@@ -64,7 +64,7 @@ install: build
 	@mkdir -p ~/.local/bin
 	@cp bin/prismctl ~/.local/bin/
 	@cp bin/shine ~/.local/bin/
-	@cp bin/shinectl ~/.local/bin/
+	@cp bin/shined ~/.local/bin/
 	@cp bin/clock ~/.local/bin/
 	@cp bin/chat ~/.local/bin/
 	@cp bin/bar ~/.local/bin/

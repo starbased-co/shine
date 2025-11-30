@@ -195,31 +195,31 @@ func (w *PrismStateWriter) Path() string {
 	return w.mmap.Path()
 }
 
-// ShinectlStateWriter writes shinectl state to an mmap file
-type ShinectlStateWriter struct {
+// ShinedStateWriter writes shined state to an mmap file
+type ShinedStateWriter struct {
 	mu   sync.Mutex
 	mmap *MappedFile
-	ptr  *ShinectlState
+	ptr  *ShinedState
 }
 
-// NewShinectlStateWriter creates a new shinectl state writer
-func NewShinectlStateWriter(path string) (*ShinectlStateWriter, error) {
-	mmap, err := CreateMappedFile(path, ShinectlStateSize)
+// NewShinedStateWriter creates a new shined state writer
+func NewShinedStateWriter(path string) (*ShinedStateWriter, error) {
+	mmap, err := CreateMappedFile(path, ShinedStateSize)
 	if err != nil {
 		return nil, err
 	}
 
-	ptr := (*ShinectlState)(unsafe.Pointer(&mmap.Data()[0]))
+	ptr := (*ShinedState)(unsafe.Pointer(&mmap.Data()[0]))
 	atomic.StoreUint64(&ptr.Version, 0)
 
-	return &ShinectlStateWriter{
+	return &ShinedStateWriter{
 		mmap: mmap,
 		ptr:  ptr,
 	}, nil
 }
 
 // Update atomically updates the state
-func (w *ShinectlStateWriter) Update(fn func(*ShinectlState)) {
+func (w *ShinedStateWriter) Update(fn func(*ShinedState)) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -229,7 +229,7 @@ func (w *ShinectlStateWriter) Update(fn func(*ShinectlState)) {
 }
 
 // AddPanel adds a new panel
-func (w *ShinectlStateWriter) AddPanel(instance, name string, pid int32, healthy bool) (int, error) {
+func (w *ShinedStateWriter) AddPanel(instance, name string, pid int32, healthy bool) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -256,7 +256,7 @@ func (w *ShinectlStateWriter) AddPanel(instance, name string, pid int32, healthy
 }
 
 // RemovePanel removes a panel by instance name
-func (w *ShinectlStateWriter) RemovePanel(instance string) {
+func (w *ShinedStateWriter) RemovePanel(instance string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -282,7 +282,7 @@ func (w *ShinectlStateWriter) RemovePanel(instance string) {
 }
 
 // SetPanelHealth updates a panel's health status
-func (w *ShinectlStateWriter) SetPanelHealth(instance string, healthy bool) {
+func (w *ShinedStateWriter) SetPanelHealth(instance string, healthy bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -302,33 +302,33 @@ func (w *ShinectlStateWriter) SetPanelHealth(instance string, healthy bool) {
 	w.endWrite()
 }
 
-func (w *ShinectlStateWriter) beginWrite() {
+func (w *ShinedStateWriter) beginWrite() {
 	v := atomic.LoadUint64(&w.ptr.Version)
 	atomic.StoreUint64(&w.ptr.Version, v+1)
 }
 
-func (w *ShinectlStateWriter) endWrite() {
+func (w *ShinedStateWriter) endWrite() {
 	v := atomic.LoadUint64(&w.ptr.Version)
 	atomic.StoreUint64(&w.ptr.Version, v+1)
 	w.mmap.Sync()
 }
 
 // Sync forces a sync to disk
-func (w *ShinectlStateWriter) Sync() error {
+func (w *ShinedStateWriter) Sync() error {
 	return w.mmap.Sync()
 }
 
 // Close closes the writer
-func (w *ShinectlStateWriter) Close() error {
+func (w *ShinedStateWriter) Close() error {
 	return w.mmap.Close()
 }
 
 // Remove closes and removes the state file
-func (w *ShinectlStateWriter) Remove() error {
+func (w *ShinedStateWriter) Remove() error {
 	return w.mmap.Remove()
 }
 
 // Path returns the state file path
-func (w *ShinectlStateWriter) Path() string {
+func (w *ShinedStateWriter) Path() string {
 	return w.mmap.Path()
 }

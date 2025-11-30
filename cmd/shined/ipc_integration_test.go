@@ -10,8 +10,8 @@ import (
 	"github.com/starbased-co/shine/pkg/rpc"
 )
 
-// TestShinectlIPC_PanelLifecycle tests full panel spawn → list → kill flow
-func TestShinectlIPC_PanelLifecycle(t *testing.T) {
+// TestShinedIPC_PanelLifecycle tests full panel spawn → list → kill flow
+func TestShinedIPC_PanelLifecycle(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
@@ -61,9 +61,9 @@ func TestShinectlIPC_PanelLifecycle(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Create client
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -119,8 +119,8 @@ func TestShinectlIPC_PanelLifecycle(t *testing.T) {
 	}
 }
 
-// TestShinectlIPC_ServiceStatus tests service status endpoint
-func TestShinectlIPC_ServiceStatus(t *testing.T) {
+// TestShinedIPC_ServiceStatus tests service status endpoint
+func TestShinedIPC_ServiceStatus(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
@@ -144,9 +144,9 @@ func TestShinectlIPC_ServiceStatus(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -166,8 +166,8 @@ func TestShinectlIPC_ServiceStatus(t *testing.T) {
 	}
 }
 
-// TestShinectlIPC_ConfigReload tests config reload endpoint
-func TestShinectlIPC_ConfigReload(t *testing.T) {
+// TestShinedIPC_ConfigReload tests config reload endpoint
+func TestShinedIPC_ConfigReload(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
@@ -187,9 +187,9 @@ func TestShinectlIPC_ConfigReload(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -208,8 +208,8 @@ func TestShinectlIPC_ConfigReload(t *testing.T) {
 	}
 }
 
-// TestShinectlIPC_ErrorHandling tests error handling for invalid requests
-func TestShinectlIPC_ErrorHandling(t *testing.T) {
+// TestShinedIPC_ErrorHandling tests error handling for invalid requests
+func TestShinedIPC_ErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
@@ -242,9 +242,9 @@ func TestShinectlIPC_ErrorHandling(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -306,8 +306,8 @@ func TestShinectlIPC_ErrorHandling(t *testing.T) {
 	}
 }
 
-// TestShinectlIPC_ConcurrentAccess tests multiple clients accessing the service
-func TestShinectlIPC_ConcurrentAccess(t *testing.T) {
+// TestShinedIPC_ConcurrentAccess tests multiple clients accessing the service
+func TestShinedIPC_ConcurrentAccess(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
@@ -328,11 +328,11 @@ func TestShinectlIPC_ConcurrentAccess(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Create multiple clients
-	clients := make([]*rpc.ShinectlClient, 5)
+	clients := make([]*rpc.ShinedClient, 5)
 	for i := range clients {
-		c, err := rpc.NewShinectlClient(sockPath)
+		c, err := rpc.NewShinedClient(sockPath)
 		if err != nil {
-			t.Fatalf("NewShinectlClient() %d error: %v", i, err)
+			t.Fatalf("NewShinedClient() %d error: %v", i, err)
 		}
 		clients[i] = c
 		defer c.Close()
@@ -343,7 +343,7 @@ func TestShinectlIPC_ConcurrentAccess(t *testing.T) {
 	// All clients make concurrent requests
 	done := make(chan error, len(clients))
 	for i, c := range clients {
-		go func(idx int, client *rpc.ShinectlClient) {
+		go func(idx int, client *rpc.ShinedClient) {
 			_, err := client.ListPanels(ctx)
 			done <- err
 		}(i, c)

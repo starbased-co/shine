@@ -10,13 +10,11 @@ import (
 type PrismEntry struct {
 	*config.PrismConfig
 
-	// Restart Policies (shinectl-specific)
 	Restart      string `toml:"restart"`       // always | on-failure | unless-stopped | no
 	RestartDelay string `toml:"restart_delay"` // Duration string (e.g., "5s")
 	MaxRestarts  int    `toml:"max_restarts"`  // Max restarts per hour (0 = unlimited)
 }
 
-// RestartPolicy represents the restart behavior
 type RestartPolicy int
 
 const (
@@ -26,7 +24,6 @@ const (
 	RestartAlways
 )
 
-// GetRestartPolicy converts string to RestartPolicy enum
 func (pe *PrismEntry) GetRestartPolicy() RestartPolicy {
 	switch pe.Restart {
 	case "always":
@@ -42,7 +39,6 @@ func (pe *PrismEntry) GetRestartPolicy() RestartPolicy {
 	}
 }
 
-// GetRestartDelay parses the restart_delay string into a Duration
 func (pe *PrismEntry) GetRestartDelay() time.Duration {
 	if pe.RestartDelay == "" {
 		return 1 * time.Second // Default
@@ -54,7 +50,6 @@ func (pe *PrismEntry) GetRestartDelay() time.Duration {
 	return d
 }
 
-// ValidateRestartPolicy validates restart policy and delay
 func (pe *PrismEntry) ValidateRestartPolicy() error {
 	if err := config.ValidateRestartPolicy(pe.Restart); err != nil {
 		return err

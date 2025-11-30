@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,9 +33,9 @@ func TestNotificationHandlers_PrismStarted(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -79,9 +80,9 @@ func TestNotificationHandlers_PrismStopped(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -126,9 +127,9 @@ func TestNotificationHandlers_PrismCrashed(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -174,9 +175,9 @@ func TestNotificationHandlers_SurfaceSwitched(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -232,9 +233,9 @@ func TestNotificationHandlers_Integration(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -257,10 +258,10 @@ func TestNotificationHandlers_ConcurrentNotifications(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
-	notificationCount := 0
+	var notificationCount int32
 	mux := handler.Map{
 		"notify/prism/started": handler.New(func(ctx context.Context, n *rpc.PrismStartedNotification) (*NotificationAck, error) {
-			notificationCount++
+			atomic.AddInt32(&notificationCount, 1)
 			return &NotificationAck{}, nil
 		}),
 	}
@@ -274,11 +275,11 @@ func TestNotificationHandlers_ConcurrentNotifications(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Create multiple clients
-	clients := make([]*rpc.ShinectlClient, 5)
+	clients := make([]*rpc.ShinedClient, 5)
 	for i := range clients {
-		c, err := rpc.NewShinectlClient(sockPath)
+		c, err := rpc.NewShinedClient(sockPath)
 		if err != nil {
-			t.Fatalf("NewShinectlClient() %d error: %v", i, err)
+			t.Fatalf("NewShinedClient() %d error: %v", i, err)
 		}
 		clients[i] = c
 		defer c.Close()
@@ -289,7 +290,7 @@ func TestNotificationHandlers_ConcurrentNotifications(t *testing.T) {
 	// Send concurrent notifications
 	done := make(chan error, len(clients))
 	for i, c := range clients {
-		go func(idx int, client *rpc.ShinectlClient) {
+		go func(idx int, client *rpc.ShinedClient) {
 			var ack NotificationAck
 			err := client.Call(ctx, "notify/prism/started", &rpc.PrismStartedNotification{
 				Panel: "panel-0",
@@ -309,8 +310,9 @@ func TestNotificationHandlers_ConcurrentNotifications(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if notificationCount != len(clients) {
-		t.Errorf("received %d notifications, want %d", notificationCount, len(clients))
+	count := atomic.LoadInt32(&notificationCount)
+	if count != int32(len(clients)) {
+		t.Errorf("received %d notifications, want %d", count, len(clients))
 	}
 }
 
@@ -337,9 +339,9 @@ func TestNotificationHandlers_ErrorHandling(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 

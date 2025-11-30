@@ -16,7 +16,7 @@
 
 ### Terminology
 
-- **Panel** = The Kitty layer shell window spawned by `shinectl`
+- **Panel** = The Kitty layer shell window spawned by `shined`
 - **Prism** = Panel + `prismctl` supervisor process
 - **Child Processes** = TUI applications (e.g., `clock`, `chat`, `bar`) managed by the supervisor
 - **Surface** = The bidirectional I/O relay between the real PTY and the active child's PTY
@@ -28,7 +28,7 @@
          │ JSON-RPC 2.0 over Unix socket
          │
 ┌────────┴────────┐
-│     shinectl    │ <- Service manager: reads shine.toml config
+│     shined    │ <- Service manager: reads shine.toml config
 └────────┬────────┘
          │ kitten @ launch --type=os-panel prismctl {instance}
          │
@@ -58,7 +58,7 @@
 | Component    | Binary         | Role                   | Socket                                        |
 | ------------ | -------------- | ---------------------- | --------------------------------------------- |
 | **shine**    | `cmd/shine`    | User CLI               | Connects to shine.sock, prism-\*.sock         |
-| **shinectl** | `cmd/shinectl` | Service manager daemon | `/run/user/{uid}/shine/shine.sock`            |
+| **shined** | `cmd/shined` | Service manager daemon | `/run/user/{uid}/shine/shine.sock`            |
 | **prismctl** | `cmd/prismctl` | PTY multiplexer        | `/run/user/{uid}/shine/prism-{instance}.sock` |
 | **Prisms**   | `cmd/prisms/*` | TUI applications       | N/A                                           |
 
@@ -66,7 +66,7 @@
 
 - **Background processing**: All TUI child processes continue running, only I/O relay switches
 - **MRU ordering**: Most recently used child gets I/O relay, others continue in background
-- **Hot-reload**: SIGHUP to shinectl reloads config without disrupting panels
+- **Hot-reload**: SIGHUP to shined reloads config without disrupting panels
 - **State files**: Binary mmap files for lock-free status reads
 
 ## IPC Protocol
@@ -76,14 +76,14 @@
 ### Socket Paths
 
 ```bash
-# shinectl socket
+# shined socket
 /run/user/$(id -u)/shine/shine.sock
 
 # prismctl sockets (per instance)
 /run/user/$(id -u)/shine/prism-{instance}.sock
 
 # State files (mmap, binary format)
-/run/user/$(id -u)/shine/shinectl.state
+/run/user/$(id -u)/shine/shined.state
 /run/user/$(id -u)/shine/prism-{instance}.state
 ```
 
@@ -99,7 +99,7 @@
 - `service/health {}` → Health check
 - `service/shutdown {graceful}` → Shutdown
 
-**shinectl (shine.sock)**:
+**shined (shine.sock)**:
 
 - `panel/list {}` → List all panels
 - `panel/spawn {config}` → Spawn new panel
@@ -107,7 +107,7 @@
 - `service/status {}` → Aggregated status
 - `config/reload {}` → Reload configuration
 
-### Notifications (prismctl → shinectl)
+### Notifications (prismctl → shined)
 
 - `prism/started {panel, name, pid}`
 - `prism/stopped {panel, name, exit_code}`
@@ -126,7 +126,7 @@ make build
 
 # Or individually (ALWAYS use -o bin/):
 go build -o bin/shine ./cmd/shine
-go build -o bin/shinectl ./cmd/shinectl
+go build -o bin/shined ./cmd/shined
 go build -o bin/prismctl ./cmd/prismctl
 
 # Build specific prism
@@ -153,7 +153,7 @@ export PATH="$PWD/bin:$PATH"    # Or add bin/ to PATH
 
 shine start                     # Start service
 shine status                    # Check status
-shine logs shinectl             # View logs
+shine logs shined             # View logs
 shine stop                      # Stop service
 ```
 
@@ -170,7 +170,7 @@ cmd/
     help.go             # Help rendering (Glamour)
     help_metadata.go    # Structured help metadata
     help/               # Embedded markdown help files
-  shinectl/           # Service manager
+  shined/           # Service manager
     main.go             # Entry point
     config.go           # Config loading
     panel_manager.go    # Spawns Kitty panels
@@ -230,7 +230,7 @@ pkg/
 - `pkg/state/types.go`: Binary state structures for mmap files
 - `cmd/prismctl/supervisor.go`: Process supervisor with surface switching and MRU
 - `cmd/prismctl/surface.go`: Bidirectional I/O relay
-- `cmd/shinectl/panel_manager.go`: Spawns Kitty panels via remote control
+- `cmd/shined/panel_manager.go`: Spawns Kitty panels via remote control
 
 ### Configuration System
 

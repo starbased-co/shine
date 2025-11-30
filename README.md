@@ -18,7 +18,7 @@ Panels are configured in `~/.config/shine/shine.toml`:
 [prisms.clock]
 path = "shine-clock"
 origin = "top-right"
-width = "200px"
+width = "200px" # todo: percentage units, other units?
 height = "60px"
 enabled = true
 ```
@@ -31,7 +31,7 @@ enabled = true
                       └────────┬────────┘
                               ↓│↑ JSON-RPC 2.0 ⇆
 ┌──────────────────────────────┴──────────────────────┐
-│  shinectl                                           │
+│  shined                                             │
 │  ├─ Loads ~/.config/shine/shine.toml                │
 │  │  └─ Discovers prism.toml defs in prisms/         │
 │  ├─ Manages prism lifecycle                         │

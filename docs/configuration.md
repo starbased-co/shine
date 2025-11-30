@@ -97,9 +97,9 @@ type PrismConfig struct {
 }
 ```
 
-### Extended Prism Entry (shinectl-specific)
+### Extended Prism Entry (shined-specific)
 
-Located in `cmd/shinectl/config.go`:
+Located in `cmd/shined/config.go`:
 
 ```go
 type PrismEntry struct {
@@ -235,10 +235,10 @@ Binary resolution:
 
 ### Hot-Reload (SIGHUP)
 
-Send SIGHUP to shinectl to reload configuration:
+Send SIGHUP to shined to reload configuration:
 
 ```bash
-pkill -HUP shinectl
+pkill -HUP shined
 ```
 
 1. Reloads shine.toml

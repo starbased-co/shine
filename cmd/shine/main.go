@@ -24,26 +24,11 @@ func main() {
 		fmt.Printf("shine v%s\n", version)
 		return
 	case "help":
-		// Check for --json flag
-		jsonOutput := false
 		topic := ""
-
-		for i := 2; i < len(os.Args); i++ {
-			if os.Args[i] == "--json" {
-				jsonOutput = true
-			} else if topic == "" {
-				topic = os.Args[i]
-			}
+		if len(os.Args) > 2 {
+			topic = os.Args[2]
 		}
-
-		if jsonOutput {
-			if err := helpJSON(topic); err != nil {
-				Error(err.Error())
-				os.Exit(1)
-			}
-		} else {
-			showHelp(topic)
-		}
+		showHelp(topic)
 		return
 	}
 

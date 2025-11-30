@@ -280,7 +280,7 @@ func TestPrismClientMethods(t *testing.T) {
 	}
 }
 
-func TestShinectlClientMethods(t *testing.T) {
+func TestShinedClientMethods(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "test.sock")
 
@@ -321,9 +321,9 @@ func TestShinectlClientMethods(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := NewShinectlClient(sockPath)
+	client, err := NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 

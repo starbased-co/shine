@@ -1,7 +1,7 @@
 # Binaries
 bin/
 /shine           # Binary in root (use bin/ instead)
-/shinectl        # Binary in root (use bin/ instead)
+/shined          # Binary in root (use bin/ instead)
 /prismctl        # Binary in root (use bin/ instead)
 /shine-*         # Binaries in root only
 *.exe

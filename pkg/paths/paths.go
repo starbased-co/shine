@@ -50,8 +50,8 @@ func RuntimeDir() string {
 	return filepath.Join("/run/user", fmt.Sprintf("%d", uid), "shine")
 }
 
-// ShinectlSocket returns the path to the shinectl control socket
-func ShinectlSocket() string {
+// ShinedSocket returns the path to the shined control socket
+func ShinedSocket() string {
 	return filepath.Join(RuntimeDir(), "shine.sock")
 }
 
@@ -65,9 +65,9 @@ func PrismState(instance string) string {
 	return filepath.Join(RuntimeDir(), fmt.Sprintf("prism-%s.state", instance))
 }
 
-// ShinectlState returns the path to the shinectl mmap state file
-func ShinectlState() string {
-	return filepath.Join(RuntimeDir(), "shinectl.state")
+// ShinedState returns the path to the shined mmap state file
+func ShinedState() string {
+	return filepath.Join(RuntimeDir(), "shined.state")
 }
 
 // DefaultConfigPath returns the default configuration file path

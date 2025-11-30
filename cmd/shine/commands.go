@@ -14,13 +14,13 @@ import (
 	"github.com/starbased-co/shine/pkg/state"
 )
 
-func connectShinectl() (*rpc.ShinectlClient, error) {
-	sockPath := paths.ShinectlSocket()
-	return rpc.NewShinectlClient(sockPath, rpc.WithTimeout(3*time.Second))
+func connectShined() (*rpc.ShinedClient, error) {
+	sockPath := paths.ShinedSocket()
+	return rpc.NewShinedClient(sockPath, rpc.WithTimeout(3*time.Second))
 }
 
-func isShinectlRunning() bool {
-	_, err := os.Stat(paths.ShinectlSocket())
+func isShinedRunning() bool {
+	_, err := os.Stat(paths.ShinedSocket())
 	return err == nil
 }
 
@@ -59,64 +59,62 @@ func findPrismctlSockets() ([]string, error) {
 }
 
 
-// cmdStart starts or resumes the shinectl service
 func cmdStart() error {
-	// Check if shinectl is already running
-	if isShinectlRunning() {
-		Success("shinectl is already running")
+	// Check if shined is already running
+	if isShinedRunning() {
+		Success("shined is already running")
 		return nil
 	}
 
-	Info("Starting shinectl service...")
+	Info("Starting shined service...")
 
-	// Find shinectl binary
-	shinectlBin, err := exec.LookPath("shinectl")
+	// Find shined binary
+	shinedBin, err := exec.LookPath("shined")
 	if err != nil {
-		return fmt.Errorf("shinectl not found in PATH: %w", err)
+		return fmt.Errorf("shined not found in PATH: %w", err)
 	}
 
-	// Start shinectl in background
-	cmd := exec.Command(shinectlBin)
+	// Start shined in background
+	cmd := exec.Command(shinedBin)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start shinectl: %w", err)
+		return fmt.Errorf("failed to start shined: %w", err)
 	}
 
 	// Wait for socket to appear
 	for i := 0; i < 50; i++ {
-		if isShinectlRunning() {
-			Success(fmt.Sprintf("shinectl started (PID: %d)", cmd.Process.Pid))
+		if isShinedRunning() {
+			Success(fmt.Sprintf("shined started (PID: %d)", cmd.Process.Pid))
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return fmt.Errorf("shinectl started but socket not created within timeout")
+	return fmt.Errorf("shined started but socket not created within timeout")
 }
 
-// cmdStop gracefully stops all panels and shinectl
 func cmdStop() error {
 	Info("Stopping shine service...")
 
 	ctx := context.Background()
 
-	// Try shinectl first
-	if isShinectlRunning() {
-		client, err := connectShinectl()
+	// Try shined first
+	if isShinedRunning() {
+		client, err := connectShined()
 		if err != nil {
-			Warning(fmt.Sprintf("Failed to connect to shinectl: %v, falling back to direct shutdown", err))
+			Warning(fmt.Sprintf("Failed to connect to shined: %v, falling back to direct shutdown", err))
 		} else {
 			defer client.Close()
 
 			// Get panel list
 			result, err := client.Status(ctx)
 			if err != nil {
-				Warning(fmt.Sprintf("Failed to query shinectl status: %v", err))
+				Warning(fmt.Sprintf("Failed to query shined status: %v", err))
 			} else {
-				// Shutdown each panel via shinectl
+				// Shutdown each panel via shined
 				for _, panel := range result.Panels {
 					Muted(fmt.Sprintf("Stopping %s...", panel.Instance))
 					_, err := client.KillPanel(ctx, panel.Instance)
@@ -166,18 +164,17 @@ func cmdStop() error {
 	return nil
 }
 
-// cmdReload reloads the configuration and updates panels
 func cmdReload() error {
 	Info("Reloading configuration...")
 
-	if !isShinectlRunning() {
-		return fmt.Errorf("shinectl is not running")
+	if !isShinedRunning() {
+		return fmt.Errorf("shined is not running")
 	}
 
 	ctx := context.Background()
-	client, err := connectShinectl()
+	client, err := connectShined()
 	if err != nil {
-		return fmt.Errorf("failed to connect to shinectl: %w", err)
+		return fmt.Errorf("failed to connect to shined: %w", err)
 	}
 	defer client.Close()
 
@@ -201,7 +198,6 @@ func cmdReload() error {
 	return nil
 }
 
-// displayStateFromMmap formats and displays state read from mmap
 func displayStateFromMmap(instance string, s *state.PrismRuntimeState) {
 	fmt.Println()
 	fmt.Printf("%s %s\n", styleBold.Render("Panel:"), instance)
@@ -237,7 +233,6 @@ func displayStateFromMmap(instance string, s *state.PrismRuntimeState) {
 	}
 }
 
-// displayStateFromRPC formats and displays state read from RPC
 func displayStateFromRPC(instance string, prisms []rpc.PrismInfo) {
 	fmt.Println()
 	fmt.Printf("%s %s\n", styleBold.Render("Panel:"), instance)
@@ -275,19 +270,18 @@ func displayStateFromRPC(instance string, prisms []rpc.PrismInfo) {
 	}
 }
 
-// cmdStatus shows the status of all panels
 func cmdStatus() error {
 	ctx := context.Background()
 
-	// Try shinectl first for aggregated status
-	if isShinectlRunning() {
-		client, err := connectShinectl()
+	// Try shined first for aggregated status
+	if isShinedRunning() {
+		client, err := connectShined()
 		if err == nil {
 			defer client.Close()
 
 			result, err := client.Status(ctx)
 			if err == nil {
-				// Display shinectl-level status
+				// Display shined-level status
 				uptime := time.Duration(result.Uptime) * time.Millisecond
 				uptimeStr := uptime.Truncate(time.Second).String()
 
@@ -305,8 +299,8 @@ func cmdStatus() error {
 				}
 				return nil
 			}
-			// If shinectl query fails, fall through to discovery
-			Warning(fmt.Sprintf("Failed to query shinectl: %v, falling back to discovery", err))
+			// If shined query fails, fall through to discovery
+			Warning(fmt.Sprintf("Failed to query shined: %v, falling back to discovery", err))
 		}
 	}
 
@@ -332,7 +326,6 @@ func cmdStatus() error {
 	return nil
 }
 
-// displayPanelStatus queries a single panel and displays its status
 func displayPanelStatus(ctx context.Context, instance string) {
 	// Try mmap first (instant, no connection needed)
 	reader, err := state.OpenPrismStateReader(paths.PrismState(instance))
@@ -367,7 +360,6 @@ func displayPanelStatus(ctx context.Context, instance string) {
 	displayStateFromRPC(instance, result.Prisms)
 }
 
-// cmdLogs shows logs for a specific panel or all panels
 func cmdLogs(panelID string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -432,8 +424,6 @@ func cmdLogs(panelID string) error {
 	return nil
 }
 
-// extractInstanceName extracts the instance name from a socket path
-// e.g., "/run/user/1000/shine/prism-clock.sock" -> "clock"
 func extractInstanceName(socketPath string) string {
 	base := filepath.Base(socketPath)
 	// Remove "prism-" prefix and ".sock" suffix

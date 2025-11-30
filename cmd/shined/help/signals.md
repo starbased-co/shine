@@ -1,18 +1,18 @@
-# shinectl signals
+# shined signals
 
 Signal handling for configuration reload and shutdown.
 
 ## USAGE
 
 ```bash
-pkill -HUP shinectl    # Reload configuration
-pkill -TERM shinectl   # Graceful shutdown
+pkill -HUP shined    # Reload configuration
+pkill -TERM shined   # Graceful shutdown
 ```
 
 ## SIGHUP - Configuration Reload
 
-When shinectl receives SIGHUP, it:
-1. Reloads prism.toml configuration
+When shined receives SIGHUP, it:
+1. Reloads shine.toml configuration
 2. Validates the new configuration
 3. Compares current panels with new config
 4. Removes panels no longer in config
@@ -22,7 +22,7 @@ Existing panels are NOT restarted during reload.
 
 ## SIGTERM/SIGINT - Graceful Shutdown
 
-When shinectl receives SIGTERM or SIGINT:
+When shined receives SIGTERM or SIGINT:
 1. Logs shutdown message
 2. Calls PanelManager.Shutdown()
 3. Terminates all prismctl supervisors
@@ -32,18 +32,18 @@ When shinectl receives SIGTERM or SIGINT:
 ## EXAMPLES
 
 ```bash
-$ pkill -HUP shinectl
+$ pkill -HUP shined
 ```
 
 ```bash
-$ pkill -TERM shinectl
+$ pkill -TERM shined
 ```
 
 ```bash
-$ kill -HUP $(pgrep shinectl)
+$ kill -HUP $(pgrep shined)
 ```
 
 ## LEARN MORE
   Use `shine reload` to send SIGHUP automatically.
   Use `shine stop` to send SIGTERM automatically.
-  See `shinectl help` for main usage.
+  See `shined help` for main usage.

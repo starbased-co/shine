@@ -10,11 +10,11 @@ import (
 	"github.com/starbased-co/shine/pkg/rpc"
 )
 
-// NotificationManager handles bidirectional notifications to shinectl
-// with graceful degradation when shinectl is unavailable
+// NotificationManager handles bidirectional notifications to shined
+// with graceful degradation when shined is unavailable
 type NotificationManager struct {
 	mu         sync.Mutex
-	client     *rpc.ShinectlClient
+	client     *rpc.ShinedClient
 	instance   string
 	connected  bool
 	reconnectC chan struct{}
@@ -36,7 +36,7 @@ func newNotificationManager(instance string) *NotificationManager {
 	return nm
 }
 
-// connectionLoop attempts to connect and reconnect to shinectl
+// connectionLoop attempts to connect and reconnect to shined
 func (nm *NotificationManager) connectionLoop() {
 	backoff := time.Second
 	maxBackoff := 30 * time.Second
@@ -63,8 +63,8 @@ func (nm *NotificationManager) connectionLoop() {
 		}
 
 		// Attempt connection
-		sockPath := paths.ShinectlSocket()
-		client, err := rpc.NewShinectlClient(sockPath, rpc.WithTimeout(2*time.Second))
+		sockPath := paths.ShinedSocket()
+		client, err := rpc.NewShinedClient(sockPath, rpc.WithTimeout(2*time.Second))
 
 		nm.mu.Lock()
 		if err != nil {
@@ -75,12 +75,12 @@ func (nm *NotificationManager) connectionLoop() {
 					backoff = maxBackoff
 				}
 			}
-			log.Printf("Notification: failed to connect to shinectl: %v (retry in %v)", err, backoff)
+			log.Printf("Notification: failed to connect to shined: %v (retry in %v)", err, backoff)
 			nm.client = nil
 			nm.connected = false
 		} else {
 			// Connection successful
-			log.Printf("Notification: connected to shinectl at %s", sockPath)
+			log.Printf("Notification: connected to shined at %s", sockPath)
 			nm.client = client
 			nm.connected = true
 			backoff = time.Second
@@ -98,7 +98,7 @@ func (nm *NotificationManager) tryReconnect() {
 }
 
 // sendNotification sends a notification with graceful failure
-func (nm *NotificationManager) sendNotification(fn func(context.Context, *rpc.ShinectlClient) error) {
+func (nm *NotificationManager) sendNotification(fn func(context.Context, *rpc.ShinedClient) error) {
 	nm.mu.Lock()
 	client := nm.client
 	connected := nm.connected
@@ -129,34 +129,34 @@ func (nm *NotificationManager) sendNotification(fn func(context.Context, *rpc.Sh
 	}
 }
 
-// OnPrismStarted notifies shinectl that a prism started
+// OnPrismStarted notifies shined that a prism started
 func (nm *NotificationManager) OnPrismStarted(name string, pid int) {
 	log.Printf("Notification: prism started %s (PID %d)", name, pid)
-	nm.sendNotification(func(ctx context.Context, c *rpc.ShinectlClient) error {
+	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
 		return c.NotifyPrismStarted(ctx, nm.instance, name, pid)
 	})
 }
 
-// OnPrismStopped notifies shinectl that a prism stopped normally
+// OnPrismStopped notifies shined that a prism stopped normally
 func (nm *NotificationManager) OnPrismStopped(name string, exitCode int) {
 	log.Printf("Notification: prism stopped %s (exit=%d)", name, exitCode)
-	nm.sendNotification(func(ctx context.Context, c *rpc.ShinectlClient) error {
+	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
 		return c.NotifyPrismStopped(ctx, nm.instance, name, exitCode)
 	})
 }
 
-// OnPrismCrashed notifies shinectl that a prism crashed
+// OnPrismCrashed notifies shined that a prism crashed
 func (nm *NotificationManager) OnPrismCrashed(name string, exitCode, signal int) {
 	log.Printf("Notification: prism crashed %s (exit=%d, signal=%d)", name, exitCode, signal)
-	nm.sendNotification(func(ctx context.Context, c *rpc.ShinectlClient) error {
+	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
 		return c.NotifyPrismCrashed(ctx, nm.instance, name, exitCode, signal)
 	})
 }
 
-// OnSurfaceSwitched notifies shinectl that foreground changed
+// OnSurfaceSwitched notifies shined that foreground changed
 func (nm *NotificationManager) OnSurfaceSwitched(from, to string) {
 	log.Printf("Notification: surface switched %s → %s", from, to)
-	nm.sendNotification(func(ctx context.Context, c *rpc.ShinectlClient) error {
+	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
 		return c.NotifySurfaceSwitched(ctx, nm.instance, from, to)
 	})
 }

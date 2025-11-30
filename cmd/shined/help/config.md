@@ -1,22 +1,22 @@
-# shinectl config
+# shined config
 
 Configuration file format and loading behavior.
 
 ## USAGE
 
 ```bash
-shinectl -config ~/.config/shine/prism.toml
+shined -config ~/.config/shine/shine.toml
 ```
 
 ## DEFAULT LOCATION
 
 ```text
-~/.config/shine/prism.toml
+~/.config/shine/shine.toml
 ```
 
 ## CONFIGURATION FORMAT
 
-Example prism.toml:
+Example shine.toml:
 
 ```toml
 [core]
@@ -39,17 +39,18 @@ height = "300px"
 
 ## VALIDATION
 
-shinectl validates configuration on startup and reload:
+shined validates configuration on startup and reload:
+
 - Prism name must not be empty
 - Origin must be valid (top-left, top-right, bottom-left, bottom-right)
 - Dimensions must be valid (pixels or percentages)
 
-Invalid configurations cause shinectl to exit or abort reload.
+Invalid configurations cause shined to exit or abort reload.
 
 ## HOT-RELOAD
 
 ```bash
-$ pkill -HUP shinectl
+pkill -HUP shined
 ```
 
 Configuration reload does NOT restart existing panels.
@@ -58,15 +59,16 @@ Only adds/removes panels based on config changes.
 ## EXAMPLES
 
 ```bash
-$ shinectl -config ~/.config/shine/dev-config.toml
+shined -config ~/.config/shine/dev-config.toml
 ```
 
 ```bash
-$ vim ~/.config/shine/prism.toml
-$ pkill -HUP shinectl
+vim ~/.config/shine/shine.toml
+pkill -HUP shined
 ```
 
 ## LEARN MORE
-  Use `shinectl help signals` for reload behavior.
-  See prism.toml documentation for full reference.
-  Use `shine status` to verify configuration.
+
+Use `shined help signals` for reload behavior.
+See shine.toml documentation for full reference.
+Use `shine status` to verify configuration.

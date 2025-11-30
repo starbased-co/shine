@@ -84,29 +84,29 @@ func (r *PrismStateReader) Path() string {
 	return r.mmap.Path()
 }
 
-// ShinectlStateReader reads shinectl state from an mmap file
-type ShinectlStateReader struct {
+// ShinedStateReader reads shined state from an mmap file
+type ShinedStateReader struct {
 	mmap *MappedFile
-	ptr  *ShinectlState
+	ptr  *ShinedState
 }
 
-// OpenShinectlStateReader opens an existing state file for reading
-func OpenShinectlStateReader(path string) (*ShinectlStateReader, error) {
-	mmap, err := OpenMappedFile(path, ShinectlStateSize)
+// OpenShinedStateReader opens an existing state file for reading
+func OpenShinedStateReader(path string) (*ShinedStateReader, error) {
+	mmap, err := OpenMappedFile(path, ShinedStateSize)
 	if err != nil {
 		return nil, err
 	}
 
-	ptr := (*ShinectlState)(unsafe.Pointer(&mmap.Data()[0]))
+	ptr := (*ShinedState)(unsafe.Pointer(&mmap.Data()[0]))
 
-	return &ShinectlStateReader{
+	return &ShinedStateReader{
 		mmap: mmap,
 		ptr:  ptr,
 	}, nil
 }
 
 // Read performs a consistent read of the state
-func (r *ShinectlStateReader) Read() (*ShinectlState, error) {
+func (r *ShinedStateReader) Read() (*ShinedState, error) {
 	for i := 0; i < MaxReadRetries; i++ {
 		v1 := atomic.LoadUint64(&r.ptr.Version)
 		if v1%2 != 0 {
@@ -125,27 +125,27 @@ func (r *ShinectlStateReader) Read() (*ShinectlState, error) {
 }
 
 // ReadFast reads state without consistency check
-func (r *ShinectlStateReader) ReadFast() (*ShinectlState, uint64) {
+func (r *ShinedStateReader) ReadFast() (*ShinedState, uint64) {
 	state := *r.ptr
 	return &state, atomic.LoadUint64(&r.ptr.Version)
 }
 
 // Version returns the current version
-func (r *ShinectlStateReader) Version() uint64 {
+func (r *ShinedStateReader) Version() uint64 {
 	return atomic.LoadUint64(&r.ptr.Version)
 }
 
 // IsWriting returns true if a write is in progress
-func (r *ShinectlStateReader) IsWriting() bool {
+func (r *ShinedStateReader) IsWriting() bool {
 	return r.Version()%2 != 0
 }
 
 // Close closes the reader
-func (r *ShinectlStateReader) Close() error {
+func (r *ShinedStateReader) Close() error {
 	return r.mmap.Close()
 }
 
 // Path returns the state file path
-func (r *ShinectlStateReader) Path() string {
+func (r *ShinedStateReader) Path() string {
 	return r.mmap.Path()
 }

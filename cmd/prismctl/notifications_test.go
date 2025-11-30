@@ -57,9 +57,9 @@ func TestNotificationDelivery_PrismStarted(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -111,9 +111,9 @@ func TestNotificationDelivery_PrismStopped(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -159,9 +159,9 @@ func TestNotificationDelivery_PrismCrashed(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -211,9 +211,9 @@ func TestNotificationDelivery_SurfaceSwitched(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 
@@ -270,9 +270,9 @@ func TestNotificationBatch(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client, err := rpc.NewShinectlClient(sockPath)
+	client, err := rpc.NewShinedClient(sockPath)
 	if err != nil {
-		t.Fatalf("NewShinectlClient() error: %v", err)
+		t.Fatalf("NewShinedClient() error: %v", err)
 	}
 	defer client.Close()
 

@@ -142,57 +142,57 @@ func (c *PrismClient) Configure(ctx context.Context, apps []AppInfo) (*Configure
 	return &result, err
 }
 
-// ShinectlClient is a typed client for shinectl RPC
-type ShinectlClient struct {
+// ShinedClient is a typed client for shined RPC
+type ShinedClient struct {
 	*Client
 }
 
-// NewShinectlClient creates a new client for shinectl
-func NewShinectlClient(sockPath string, opts ...ClientOption) (*ShinectlClient, error) {
+// NewShinedClient creates a new client for shined
+func NewShinedClient(sockPath string, opts ...ClientOption) (*ShinedClient, error) {
 	c, err := NewClient(sockPath, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &ShinectlClient{Client: c}, nil
+	return &ShinedClient{Client: c}, nil
 }
 
 // ListPanels returns all panels
-func (c *ShinectlClient) ListPanels(ctx context.Context) (*PanelListResult, error) {
+func (c *ShinedClient) ListPanels(ctx context.Context) (*PanelListResult, error) {
 	var result PanelListResult
 	err := c.Call(ctx, "panel/list", nil, &result)
 	return &result, err
 }
 
 // SpawnPanel spawns a new panel
-func (c *ShinectlClient) SpawnPanel(ctx context.Context, config map[string]any) (*PanelSpawnResult, error) {
+func (c *ShinedClient) SpawnPanel(ctx context.Context, config map[string]any) (*PanelSpawnResult, error) {
 	var result PanelSpawnResult
 	err := c.Call(ctx, "panel/spawn", &PanelSpawnRequest{Config: config}, &result)
 	return &result, err
 }
 
 // KillPanel kills a panel
-func (c *ShinectlClient) KillPanel(ctx context.Context, instance string) (*PanelKillResult, error) {
+func (c *ShinedClient) KillPanel(ctx context.Context, instance string) (*PanelKillResult, error) {
 	var result PanelKillResult
 	err := c.Call(ctx, "panel/kill", &PanelKillRequest{Instance: instance}, &result)
 	return &result, err
 }
 
 // Status returns service status
-func (c *ShinectlClient) Status(ctx context.Context) (*ServiceStatusResult, error) {
+func (c *ShinedClient) Status(ctx context.Context) (*ServiceStatusResult, error) {
 	var result ServiceStatusResult
 	err := c.Call(ctx, "service/status", nil, &result)
 	return &result, err
 }
 
 // Reload reloads configuration
-func (c *ShinectlClient) Reload(ctx context.Context) (*ConfigReloadResult, error) {
+func (c *ShinedClient) Reload(ctx context.Context) (*ConfigReloadResult, error) {
 	var result ConfigReloadResult
 	err := c.Call(ctx, "config/reload", nil, &result)
 	return &result, err
 }
 
 // NotifyPrismStarted sends a prism started notification
-func (c *ShinectlClient) NotifyPrismStarted(ctx context.Context, panel, name string, pid int) error {
+func (c *ShinedClient) NotifyPrismStarted(ctx context.Context, panel, name string, pid int) error {
 	return c.Notify(ctx, "prism/started", &PrismStartedNotification{
 		Panel: panel,
 		Name:  name,
@@ -201,7 +201,7 @@ func (c *ShinectlClient) NotifyPrismStarted(ctx context.Context, panel, name str
 }
 
 // NotifyPrismStopped sends a prism stopped notification
-func (c *ShinectlClient) NotifyPrismStopped(ctx context.Context, panel, name string, exitCode int) error {
+func (c *ShinedClient) NotifyPrismStopped(ctx context.Context, panel, name string, exitCode int) error {
 	return c.Notify(ctx, "prism/stopped", &PrismStoppedNotification{
 		Panel:    panel,
 		Name:     name,
@@ -210,7 +210,7 @@ func (c *ShinectlClient) NotifyPrismStopped(ctx context.Context, panel, name str
 }
 
 // NotifyPrismCrashed sends a prism crashed notification
-func (c *ShinectlClient) NotifyPrismCrashed(ctx context.Context, panel, name string, exitCode, signal int) error {
+func (c *ShinedClient) NotifyPrismCrashed(ctx context.Context, panel, name string, exitCode, signal int) error {
 	return c.Notify(ctx, "prism/crashed", &PrismCrashedNotification{
 		Panel:    panel,
 		Name:     name,
@@ -220,7 +220,7 @@ func (c *ShinectlClient) NotifyPrismCrashed(ctx context.Context, panel, name str
 }
 
 // NotifySurfaceSwitched sends a surface switched notification
-func (c *ShinectlClient) NotifySurfaceSwitched(ctx context.Context, panel, from, to string) error {
+func (c *ShinedClient) NotifySurfaceSwitched(ctx context.Context, panel, from, to string) error {
 	return c.Notify(ctx, "surface/switched", &SurfaceSwitchedNotification{
 		Panel: panel,
 		From:  from,

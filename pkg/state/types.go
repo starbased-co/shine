@@ -14,7 +14,7 @@ const (
 
 	PanelEntrySize       = 136  // bytes per panel entry
 	MaxPanels            = 32   // max panels
-	ShinectlStateSize    = 4368 // total size of ShinectlState
+	ShinedStateSize    = 4368 // total size of ShinedState
 
 	NameMaxLen = 63 // max length for names (64 bytes with length prefix)
 )
@@ -200,9 +200,9 @@ func (e *PanelEntry) IsActive() bool {
 	return e.PID != 0
 }
 
-// ShinectlState is the mmap-friendly state structure for shinectl
+// ShinedState is the mmap-friendly state structure for shined
 // Total size: 4368 bytes
-type ShinectlState struct {
+type ShinedState struct {
 	Version    uint64           // 8 bytes: sequence counter (odd=writing, even=complete)
 	PanelCount uint8            // 1 byte: number of active panels
 	_padding   [7]byte          // 7 bytes: padding for alignment
@@ -210,7 +210,7 @@ type ShinectlState struct {
 }
 
 // ActivePanels returns a slice of active panel entries
-func (s *ShinectlState) ActivePanels() []PanelEntry {
+func (s *ShinedState) ActivePanels() []PanelEntry {
 	result := make([]PanelEntry, 0, s.PanelCount)
 	for i := 0; i < int(s.PanelCount); i++ {
 		if s.Panels[i].IsActive() {
@@ -231,7 +231,7 @@ func init() {
 	if size := unsafe.Sizeof(PanelEntry{}); size != PanelEntrySize {
 		panic(fmt.Sprintf("PanelEntry size mismatch: got %d, want %d", size, PanelEntrySize))
 	}
-	if size := unsafe.Sizeof(ShinectlState{}); size != ShinectlStateSize {
-		panic(fmt.Sprintf("ShinectlState size mismatch: got %d, want %d", size, ShinectlStateSize))
+	if size := unsafe.Sizeof(ShinedState{}); size != ShinedStateSize {
+		panic(fmt.Sprintf("ShinedState size mismatch: got %d, want %d", size, ShinedStateSize))
 	}
 }

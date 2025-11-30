@@ -31,12 +31,12 @@ type Panel struct {
 
 // PrismRestartState tracks restart state for a prism within a panel
 type PrismRestartState struct {
-	RestartCount     int       // Number of restarts in current hour
-	RestartTimestamps []time.Time // Timestamps of restarts (for rate limiting)
-	ExplicitlyStopped bool      // True if prism was explicitly stopped by user
+	RestartCount     int       		// Number of restarts in current hour
+	RestartTimestamps []time.Time // Rate limiter timestamp
+	ExplicitlyStopped bool      	// Determines unless-stopped restart policy
 }
 
-// PanelManager manages the lifecycle of Kitty panels running prismctl
+// PanelManager manages the lifecycle of the panel
 type PanelManager struct {
 	mu          sync.Mutex
 	panels      map[string]*Panel // Map: instance name -> Panel
@@ -88,7 +88,6 @@ func getPIDFromWindowID(windowID string) (int, error) {
 
 // NewPanelManager creates a new panel manager
 func NewPanelManager() (*PanelManager, error) {
-	// Ensure log directory exists
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
@@ -101,7 +100,7 @@ func NewPanelManager() (*PanelManager, error) {
 	// Find prismctl binary
 	prismctlBin, err := exec.LookPath("prismctl")
 	if err != nil {
-		// Try relative to shinectl binary
+		// Try relative to shined binary
 		exePath, _ := os.Executable()
 		if exePath != "" {
 			prismctlBin = filepath.Join(filepath.Dir(exePath), "prismctl")

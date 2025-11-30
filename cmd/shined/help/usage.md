@@ -1,25 +1,25 @@
-# shinectl - Shine Service Manager
+# shined - Shine Service Manager
 
 Background service that spawns and manages prismctl panel supervisors.
 
 ## USAGE
 
 ```bash
-shinectl [options]
+shined [options]
 ```
 
 ## OPTIONS
 
 ```text
--config PATH    Path to prism.toml (default: ~/.config/shine/prism.toml)
+-config PATH    Path to shine.toml (default: ~/.config/shine/shine.toml)
 -version        Print version and exit
 -help           Show this help message
 ```
 
 ## BEHAVIOR
 
-shinectl is a long-running daemon that:
-- Reads configuration from prism.toml
+shined is a long-running daemon that:
+- Reads configuration from shine.toml
 - Spawns Kitty panels via remote control API
 - Launches prismctl supervisors for each panel
 - Monitors panel health (30-second interval)
@@ -35,26 +35,26 @@ SIGTERM/SIGINT  Graceful shutdown of all panels
 ## EXAMPLES
 
 ```bash
-$ shinectl
+$ shined
 ```
 
 ```bash
-$ shinectl -config ~/.config/shine/my-config.toml
+$ shined -config ~/.config/shine/my-config.toml
 ```
 
 ```bash
-$ pkill -HUP shinectl
+$ pkill -HUP shined
 ```
 
 ## FILES
 
 ```text
-Config:  ~/.config/shine/prism.toml
-Logs:    ~/.local/share/shine/logs/shinectl.log
+Config:  ~/.config/shine/shine.toml
+Logs:    ~/.local/share/shine/logs/shined.log
 Sockets: /run/user/{uid}/shine/prism-*.sock
 ```
 
 ## LEARN MORE
-  Use `shine start` to launch shinectl as a service.
-  Use `shine logs shinectl` to view logs.
-  See prism.toml documentation for configuration options.
+  Use `shine start` to launch shined as a service.
+  Use `shine logs shined` to view logs.
+  See shine.toml documentation for configuration options.

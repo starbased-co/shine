@@ -10,14 +10,12 @@ import (
 	"github.com/starbased-co/shine/pkg/rpc"
 )
 
-// Handlers handles RPC method calls
 type Handlers struct {
 	pm       *PanelManager
 	state    *StateManager
 	cfgPath  string
 }
 
-// handlePanelList returns a list of all active panels
 func (h *Handlers) handlePanelList(ctx context.Context) (*rpc.PanelListResult, error) {
 	panels := h.pm.ListPanels()
 
@@ -39,9 +37,7 @@ func (h *Handlers) handlePanelList(ctx context.Context) (*rpc.PanelListResult, e
 	return result, nil
 }
 
-// handlePanelSpawn spawns a new panel
 func (h *Handlers) handlePanelSpawn(ctx context.Context, req *rpc.PanelSpawnRequest) (*rpc.PanelSpawnResult, error) {
-	// Parse config map into PrismEntry via JSON round-trip
 	configJSON, err := json.Marshal(req.Config)
 	if err != nil {
 		return nil, rpc.ErrInvalidParams(fmt.Sprintf("failed to serialize config: %v", err))
@@ -52,12 +48,10 @@ func (h *Handlers) handlePanelSpawn(ctx context.Context, req *rpc.PanelSpawnRequ
 		return nil, rpc.ErrInvalidParams(fmt.Sprintf("failed to parse prism config: %v", err))
 	}
 
-	// Validate required fields
 	if prismConfig.Name == "" {
 		return nil, rpc.ErrInvalidParams("prism name is required")
 	}
 
-	// Parse restart policy fields if present
 	entry := &PrismEntry{
 		PrismConfig: &prismConfig,
 	}
@@ -72,31 +66,26 @@ func (h *Handlers) handlePanelSpawn(ctx context.Context, req *rpc.PanelSpawnRequ
 		entry.MaxRestarts = int(maxRestarts)
 	}
 
-	// Validate restart policy if specified
 	if err := entry.ValidateRestartPolicy(); err != nil {
 		return nil, rpc.ErrConfig(err.Error())
 	}
 
-	// Generate instance name (use prism name if not specified)
 	instanceName := prismConfig.Name
 	if instance, ok := req.Config["instance"].(string); ok && instance != "" {
 		instanceName = instance
 	}
 
-	// Check if panel already exists
 	if _, exists := h.pm.GetPanel(instanceName); exists {
 		return nil, rpc.ErrResourceBusy(fmt.Sprintf("panel instance %s already exists", instanceName))
 	}
 
 	log.Printf("panel/spawn: spawning panel %s (prism: %s)", instanceName, prismConfig.Name)
 
-	// Spawn the panel
 	panel, err := h.pm.SpawnPanel(entry, instanceName)
 	if err != nil {
 		return nil, rpc.ErrOperationFailed("spawn panel", err)
 	}
 
-	// Update state
 	h.state.OnPanelSpawned(panel.Instance, panel.Name, panel.PID, true)
 
 	log.Printf("panel/spawn: successfully spawned panel %s at %s", instanceName, panel.SocketPath)
@@ -107,7 +96,6 @@ func (h *Handlers) handlePanelSpawn(ctx context.Context, req *rpc.PanelSpawnRequ
 	}, nil
 }
 
-// handlePanelKill kills a panel
 func (h *Handlers) handlePanelKill(ctx context.Context, req *rpc.PanelKillRequest) (*rpc.PanelKillResult, error) {
 	if req.Instance == "" {
 		return nil, rpc.ErrInvalidParams("instance name required")
@@ -118,13 +106,11 @@ func (h *Handlers) handlePanelKill(ctx context.Context, req *rpc.PanelKillReques
 		return &rpc.PanelKillResult{Killed: false}, err
 	}
 
-	// Update state
 	h.state.OnPanelKilled(req.Instance)
 
 	return &rpc.PanelKillResult{Killed: true}, nil
 }
 
-// handleServiceStatus returns aggregated service status
 func (h *Handlers) handleServiceStatus(ctx context.Context) (*rpc.ServiceStatusResult, error) {
 	panels := h.pm.ListPanels()
 
@@ -148,11 +134,9 @@ func (h *Handlers) handleServiceStatus(ctx context.Context) (*rpc.ServiceStatusR
 	return result, nil
 }
 
-// handleConfigReload reloads the configuration
 func (h *Handlers) handleConfigReload(ctx context.Context) (*rpc.ConfigReloadResult, error) {
 	log.Println("config/reload via RPC")
 
-	// Reload configuration using existing reloadConfig function
 	err := reloadConfig(h.pm, h.cfgPath)
 	if err != nil {
 		return &rpc.ConfigReloadResult{

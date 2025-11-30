@@ -364,13 +364,13 @@ func TestMappedFileFileSizeMismatch(t *testing.T) {
 	}
 }
 
-func TestShinectlStateWriterReader(t *testing.T) {
+func TestShinedStateWriterReader(t *testing.T) {
 	tmpDir := t.TempDir()
-	statePath := filepath.Join(tmpDir, "shinectl.state")
+	statePath := filepath.Join(tmpDir, "shined.state")
 
-	writer, err := NewShinectlStateWriter(statePath)
+	writer, err := NewShinedStateWriter(statePath)
 	if err != nil {
-		t.Fatalf("NewShinectlStateWriter() error: %v", err)
+		t.Fatalf("NewShinedStateWriter() error: %v", err)
 	}
 	defer writer.Remove()
 
@@ -386,9 +386,9 @@ func TestShinectlStateWriterReader(t *testing.T) {
 	writer.AddPanel("panel-1", "side", 2002, false)
 
 	// Read
-	reader, err := OpenShinectlStateReader(statePath)
+	reader, err := OpenShinedStateReader(statePath)
 	if err != nil {
-		t.Fatalf("OpenShinectlStateReader() error: %v", err)
+		t.Fatalf("OpenShinedStateReader() error: %v", err)
 	}
 	defer reader.Close()
 
@@ -417,22 +417,22 @@ func TestShinectlStateWriterReader(t *testing.T) {
 	}
 }
 
-func TestShinectlStateWriterSetHealth(t *testing.T) {
+func TestShinedStateWriterSetHealth(t *testing.T) {
 	tmpDir := t.TempDir()
-	statePath := filepath.Join(tmpDir, "shinectl.state")
+	statePath := filepath.Join(tmpDir, "shined.state")
 
-	writer, err := NewShinectlStateWriter(statePath)
+	writer, err := NewShinedStateWriter(statePath)
 	if err != nil {
-		t.Fatalf("NewShinectlStateWriter() error: %v", err)
+		t.Fatalf("NewShinedStateWriter() error: %v", err)
 	}
 	defer writer.Remove()
 
 	writer.AddPanel("panel-0", "main", 2001, false)
 	writer.SetPanelHealth("panel-0", true)
 
-	reader, err := OpenShinectlStateReader(statePath)
+	reader, err := OpenShinedStateReader(statePath)
 	if err != nil {
-		t.Fatalf("OpenShinectlStateReader() error: %v", err)
+		t.Fatalf("OpenShinedStateReader() error: %v", err)
 	}
 	defer reader.Close()
 
@@ -453,7 +453,7 @@ func TestStructSizes(t *testing.T) {
 		{"PrismEntry", int(PrismEntrySize), 80},
 		{"PrismRuntimeState", int(PrismRuntimeStateSize), 1424},
 		{"PanelEntry", int(PanelEntrySize), 136},
-		{"ShinectlState", int(ShinectlStateSize), 4368},
+		{"ShinedState", int(ShinedStateSize), 4368},
 	}
 
 	for _, tt := range tests {
