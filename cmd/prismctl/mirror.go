@@ -1,3 +1,7 @@
+// mirror.go implements bidirectional I/O mirroring between the real PTY and
+// child PTYs. The mirror reflects user input to the foreground prism and
+// prism output back to the terminal.
+
 package main
 
 import (
@@ -11,38 +15,35 @@ import (
 	"time"
 )
 
-// surfaceState tracks the state of an active surface
-type surfaceState struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
-	active    bool
-	childPTY  *os.File // Track PTY so we can interrupt it
+type mirrorState struct {
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
+	active   bool
+	childPTY *os.File
 }
 
-// activateSurface launches bidirectional copy between Real PTY and child PTY
+// activateMirror launches bidirectional copy between Real PTY and child PTY
 // Real PTY (stdin/stdout) ↔ child PTY master (foreground prism)
-func activateSurface(ctx context.Context, realPTY *os.File, childPTY *os.File) (*surfaceState, error) {
+func activateMirror(ctx context.Context, realPTY *os.File, childPTY *os.File) (*mirrorState, error) {
 	if realPTY == nil || childPTY == nil {
-		return nil, fmt.Errorf("cannot activate surface with nil PTY")
+		return nil, fmt.Errorf("cannot activate mirror with nil PTY")
 	}
 
-	// Clear any previous read deadline (from deactivateSurface)
+	// Clear any previous read deadline (from deactivateMirror)
 	if err := childPTY.SetReadDeadline(time.Time{}); err != nil {
 		log.Printf("Warning: failed to clear read deadline: %v", err)
 	}
 
-	// Create cancellable context for this surface
-	surfaceCtx, cancel := context.WithCancel(ctx)
+	mirrorCtx, cancel := context.WithCancel(ctx)
 
-	state := &surfaceState{
-		ctx:      surfaceCtx,
+	state := &mirrorState{
+		ctx:      mirrorCtx,
 		cancel:   cancel,
 		active:   true,
 		childPTY: childPTY,
 	}
 
-	// Start bidirectional surface goroutines
 	state.wg.Add(2)
 
 	// Real PTY → child PTY (user input to prism)
@@ -54,7 +55,7 @@ func activateSurface(ctx context.Context, realPTY *os.File, childPTY *os.File) (
 			// - ErrClosedPipe: pipe closed
 			// - "input/output error": PTY closed (ENXIO/EIO)
 			if err != io.EOF && err != io.ErrClosedPipe && !isExpectedPTYError(err) {
-				log.Printf("Surface (real→child) error: %v", err)
+				log.Printf("Mirror (real→child) error: %v", err)
 			}
 		}
 	}()
@@ -68,44 +69,38 @@ func activateSurface(ctx context.Context, realPTY *os.File, childPTY *os.File) (
 			// - ErrClosedPipe: pipe closed
 			// - "input/output error": PTY closed (ENXIO/EIO)
 			if err != io.EOF && err != io.ErrClosedPipe && !isExpectedPTYError(err) {
-				log.Printf("Surface (child→real) error: %v", err)
+				log.Printf("Mirror (child→real) error: %v", err)
 			}
 		}
 	}()
 
-	log.Printf("Surface activated: Real PTY ↔ child PTY (fd %d)", childPTY.Fd())
+	log.Printf("Mirror activated: Real PTY ↔ child PTY (fd %d)", childPTY.Fd())
 
 	return state, nil
 }
 
-// deactivateSurface cancels surface goroutines (non-blocking)
-func deactivateSurface(state *surfaceState) {
+func deactivateMirror(state *mirrorState) {
 	if state == nil || !state.active {
 		return
 	}
 
-	// Cancel context
 	state.cancel()
 
 	// Force child PTY io.Copy to return by setting deadline
-	// This interrupts one goroutine (child→real)
 	if state.childPTY != nil {
 		state.childPTY.SetReadDeadline(time.Unix(0, 0))
 	}
 
 	// Don't wait for goroutines - the stdin reader will be blocked until next input
-	// Just abandon them and let them die naturally
 	state.active = false
 }
 
-// isExpectedPTYError checks if an error is expected during PTY shutdown
 func isExpectedPTYError(err error) bool {
 	if err == nil {
 		return false
 	}
 	errStr := err.Error()
-	// Common PTY closure errors on Linux
 	return strings.Contains(errStr, "input/output error") || // EIO
 		strings.Contains(errStr, "no such device") || // ENXIO
-		strings.Contains(errStr, "i/o timeout") // Deadline set during deactivateSurface
+		strings.Contains(errStr, "i/o timeout") // Deadline set during deactivateMirror
 }

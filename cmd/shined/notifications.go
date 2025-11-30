@@ -44,13 +44,11 @@ func (h *Handlers) handlePrismCrashed(ctx context.Context, n *rpc.PrismCrashedNo
 	return &NotificationAck{}, nil
 }
 
-// handleSurfaceSwitched handles notification when foreground prism changes
-func (h *Handlers) handleSurfaceSwitched(ctx context.Context, n *rpc.SurfaceSwitchedNotification) (*NotificationAck, error) {
-	log.Printf("[%s] surface switched: %s → %s", n.Panel, n.From, n.To)
+func (h *Handlers) handleForegroundChanged(ctx context.Context, n *rpc.ForegroundChangedNotification) (*NotificationAck, error) {
+	log.Printf("[%s] foreground changed: %s → %s", n.Panel, n.From, n.To)
 
-	// Update state tracking if needed
 	if h.state != nil {
-		h.state.OnPanelSurfaceSwitched(n.Panel, n.From, n.To)
+		h.state.OnPanelForegroundChanged(n.Panel, n.From, n.To)
 	}
 
 	return &NotificationAck{}, nil

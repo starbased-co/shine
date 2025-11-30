@@ -153,15 +153,14 @@ func TestNotificationHandlers_PrismCrashed(t *testing.T) {
 	}
 }
 
-// TestNotificationHandlers_SurfaceSwitched tests surface switched notification handler
-func TestNotificationHandlers_SurfaceSwitched(t *testing.T) {
+func TestNotificationHandlers_ForegroundChanged(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
-	var receivedNotification *rpc.SurfaceSwitchedNotification
+	var receivedNotification *rpc.ForegroundChangedNotification
 
 	mux := handler.Map{
-		"notify/surface/switched": handler.New(func(ctx context.Context, n *rpc.SurfaceSwitchedNotification) (*NotificationAck, error) {
+		"notify/foreground/changed": handler.New(func(ctx context.Context, n *rpc.ForegroundChangedNotification) (*NotificationAck, error) {
 			receivedNotification = n
 			return &NotificationAck{}, nil
 		}),
@@ -181,14 +180,14 @@ func TestNotificationHandlers_SurfaceSwitched(t *testing.T) {
 	}
 	defer client.Close()
 
-	notification := &rpc.SurfaceSwitchedNotification{
+	notification := &rpc.ForegroundChangedNotification{
 		Panel: "panel-0",
 		From:  "clock",
 		To:    "bar",
 	}
 
 	var ack NotificationAck
-	if err := client.Call(context.Background(), "notify/surface/switched", notification, &ack); err != nil {
+	if err := client.Call(context.Background(), "notify/foreground/changed", notification, &ack); err != nil {
 		t.Fatalf("notification call error: %v", err)
 	}
 
@@ -219,7 +218,7 @@ func TestNotificationHandlers_Integration(t *testing.T) {
 			receivedCount++
 			return &NotificationAck{}, nil
 		}),
-		"notify/surface/switched": handler.New(func(ctx context.Context, n *rpc.SurfaceSwitchedNotification) (*NotificationAck, error) {
+		"notify/foreground/changed": handler.New(func(ctx context.Context, n *rpc.ForegroundChangedNotification) (*NotificationAck, error) {
 			receivedCount++
 			return &NotificationAck{}, nil
 		}),
@@ -246,7 +245,7 @@ func TestNotificationHandlers_Integration(t *testing.T) {
 	client.Call(ctx, "notify/prism/started", &rpc.PrismStartedNotification{Panel: "panel-0", Name: "clock", PID: 1}, &ack)
 	client.Call(ctx, "notify/prism/stopped", &rpc.PrismStoppedNotification{Panel: "panel-0", Name: "clock"}, &ack)
 	client.Call(ctx, "notify/prism/crashed", &rpc.PrismCrashedNotification{Panel: "panel-0", Name: "bar"}, &ack)
-	client.Call(ctx, "notify/surface/switched", &rpc.SurfaceSwitchedNotification{Panel: "panel-0", From: "clock", To: "bar"}, &ack)
+	client.Call(ctx, "notify/foreground/changed", &rpc.ForegroundChangedNotification{Panel: "panel-0", From: "clock", To: "bar"}, &ack)
 
 	if receivedCount != 4 {
 		t.Errorf("received %d notifications, want 4", receivedCount)

@@ -33,9 +33,9 @@ type supervisor struct {
 	prismList    []prismInstance // MRU list: [0] = foreground, [1] = most recent background, etc.
 	shutdownCh   chan struct{}
 	childExitCh  chan childExit
-	surface       *surfaceState
-	surfaceCtx    context.Context
-	surfaceCancel context.CancelFunc
+	mirror       *mirrorState
+	mirrorCtx    context.Context
+	mirrorCancel context.CancelFunc
 	shuttingDown bool
 	stateManager *StateManager
 	notifyMgr    *NotificationManager
@@ -54,9 +54,9 @@ func newSupervisor(termState *terminalState, stateMgr *StateManager, notifyMgr *
 		prismList:     make([]prismInstance, 0),
 		shutdownCh:    make(chan struct{}),
 		childExitCh:   make(chan childExit, 1),
-		surface:       nil,
-		surfaceCtx:    ctx,
-		surfaceCancel: cancel,
+		mirror:       nil,
+		mirrorCtx:    ctx,
+		mirrorCancel: cancel,
 		stateManager:  stateMgr,
 		notifyMgr:     notifyMgr,
 		appPaths:      make(map[string]string),
@@ -177,8 +177,8 @@ func (s *supervisor) launchAndForeground(prismName string) error {
 	}
 	s.prismList = append([]prismInstance{newInstance}, s.prismList...)
 
-	if err := s.activateSurfaceToForeground(); err != nil {
-		log.Printf("Warning: failed to start surface: %v", err)
+	if err := s.activateMirrorToForeground(); err != nil {
+		log.Printf("Warning: failed to start mirror: %v", err)
 	}
 
 	if s.stateManager != nil {
@@ -230,8 +230,8 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 
 	log.Printf("Prism %s brought to foreground", target.name)
 
-	if err := s.swapSurface(); err != nil {
-		log.Printf("Warning: failed to swap surface: %v", err)
+	if err := s.swapMirror(); err != nil {
+		log.Printf("Warning: failed to swap mirror: %v", err)
 	}
 
 	if err := unix.Kill(target.pid, unix.SIGWINCH); err != nil {
@@ -244,7 +244,7 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 
 	if s.notifyMgr != nil && len(s.prismList) > 1 {
 		previousFg := s.prismList[1].name
-		s.notifyMgr.OnSurfaceSwitched(previousFg, target.name)
+		s.notifyMgr.OnForegroundChanged(previousFg, target.name)
 	}
 
 	return nil
@@ -307,9 +307,9 @@ func (s *supervisor) handleChildExit(pid, exitCode int) {
 	}
 
 	if exitedIdx == 0 {
-		if s.surface != nil {
-			deactivateSurface(s.surface)
-			s.surface = nil
+		if s.mirror != nil {
+			deactivateMirror(s.mirror)
+			s.mirror = nil
 		}
 
 		if err := s.termState.resetTerminalState(); err != nil {
@@ -403,13 +403,13 @@ func (s *supervisor) shutdown() {
 
 	log.Printf("Supervisor shutdown initiated")
 
-	if s.surface != nil {
-		deactivateSurface(s.surface)
-		s.surface = nil
+	if s.mirror != nil {
+		deactivateMirror(s.mirror)
+		s.mirror = nil
 	}
 
-	if s.surfaceCancel != nil {
-		s.surfaceCancel()
+	if s.mirrorCancel != nil {
+		s.mirrorCancel()
 	}
 
 	close(s.shutdownCh)
@@ -456,8 +456,7 @@ func (s *supervisor) isShuttingDown() bool {
 	return s.shuttingDown
 }
 
-// activateSurfaceToForeground starts surface to current foreground prism
-func (s *supervisor) activateSurfaceToForeground() error {
+func (s *supervisor) activateMirrorToForeground() error {
 	if len(s.prismList) == 0 {
 		return fmt.Errorf("no prisms to connect to")
 	}
@@ -467,44 +466,43 @@ func (s *supervisor) activateSurfaceToForeground() error {
 		return fmt.Errorf("internal error: position [0] not foreground")
 	}
 
-	if s.surface != nil {
-		deactivateSurface(s.surface)
-		s.surface = nil
-		log.Printf("Stopped previous surface before starting new one")
+	if s.mirror != nil {
+		deactivateMirror(s.mirror)
+		s.mirror = nil
+		log.Printf("Stopped previous mirror before starting new one")
 	}
 
-	// Start new surface: os.Stdin (Real PTY slave) ↔ foreground.ptyMaster
-	surface, err := activateSurface(s.surfaceCtx, os.Stdin, foreground.ptyMaster)
+	// os.Stdin (Real PTY slave) ↔ foreground.ptyMaster
+	mirror, err := activateMirror(s.mirrorCtx, os.Stdin, foreground.ptyMaster)
 	if err != nil {
-		return fmt.Errorf("failed to start surface: %w", err)
+		return fmt.Errorf("failed to start mirror: %w", err)
 	}
 
-	s.surface = surface
-	log.Printf("Surface started to foreground prism: %s (PID %d)", foreground.name, foreground.pid)
+	s.mirror = mirror
+	log.Printf("Mirror started to foreground prism: %s (PID %d)", foreground.name, foreground.pid)
 
 	return nil
 }
 
-// swapSurface stops current surface and starts new one to foreground
-func (s *supervisor) swapSurface() error {
+func (s *supervisor) swapMirror() error {
 	startTime := time.Now()
 
-	if s.surface != nil {
-		deactivateSurface(s.surface)
-		s.surface = nil
+	if s.mirror != nil {
+		deactivateMirror(s.mirror)
+		s.mirror = nil
 	}
 
-	// Clear screen AFTER stopping old surface but BEFORE starting new one
+	// Clear screen AFTER stopping old mirror but BEFORE starting new one
 	// This ensures no race between clear and buffered output from background prism
 	// CSI 2 J = clear screen, CSI H = cursor home, CSI 0 m = reset all attributes
 	os.Stdout.WriteString("\x1b[2J\x1b[H\x1b[0m")
 
-	if err := s.activateSurfaceToForeground(); err != nil {
+	if err := s.activateMirrorToForeground(); err != nil {
 		return err
 	}
 
 	swapLatency := time.Since(startTime)
-	log.Printf("Surface swap completed in %v", swapLatency)
+	log.Printf("Mirror swap completed in %v", swapLatency)
 
 	if swapLatency > 50*time.Millisecond {
 		log.Printf("Warning: swap latency exceeded 50ms target: %v", swapLatency)

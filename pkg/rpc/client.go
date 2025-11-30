@@ -192,8 +192,8 @@ func (c *ShinedClient) NotifyPrismCrashed(ctx context.Context, panel, name strin
 	})
 }
 
-func (c *ShinedClient) NotifySurfaceSwitched(ctx context.Context, panel, from, to string) error {
-	return c.Notify(ctx, "surface/switched", &SurfaceSwitchedNotification{
+func (c *ShinedClient) NotifyForegroundChanged(ctx context.Context, panel, from, to string) error {
+	return c.Notify(ctx, "foreground/changed", &ForegroundChangedNotification{
 		Panel: panel,
 		From:  from,
 		To:    to,

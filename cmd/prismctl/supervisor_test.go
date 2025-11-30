@@ -98,16 +98,16 @@ func TestNewSupervisor_Initialization(t *testing.T) {
 		t.Error("supervisor.childExitCh is nil")
 	}
 
-	if sup.surface != nil {
-		t.Error("supervisor.relay should be nil initially")
+	if sup.mirror != nil {
+		t.Error("supervisor.mirror should be nil initially")
 	}
 
-	if sup.surfaceCtx == nil {
-		t.Error("supervisor.surfaceCtx is nil")
+	if sup.mirrorCtx == nil {
+		t.Error("supervisor.mirrorCtx is nil")
 	}
 
-	if sup.surfaceCancel == nil {
-		t.Error("supervisor.relayCancel is nil")
+	if sup.mirrorCancel == nil {
+		t.Error("supervisor.mirrorCancel is nil")
 	}
 
 	// Verify shutdown channel is not closed
@@ -235,26 +235,26 @@ func TestChildExit_NonZeroExitCode(t *testing.T) {
 	}
 }
 
-func TestSupervisor_RelayContextCancellation(t *testing.T) {
+func TestSupervisor_MirrorContextCancellation(t *testing.T) {
 	sup := newSupervisor(&terminalState{}, nil, nil)
 
 	// Verify context is not cancelled initially
 	select {
-	case <-sup.surfaceCtx.Done():
-		t.Error("surfaceCtx should not be cancelled on initialization")
+	case <-sup.mirrorCtx.Done():
+		t.Error("mirrorCtx should not be cancelled on initialization")
 	default:
 		// Expected
 	}
 
 	// Cancel context
-	sup.surfaceCancel()
+	sup.mirrorCancel()
 
 	// Verify context is now cancelled
 	select {
-	case <-sup.surfaceCtx.Done():
+	case <-sup.mirrorCtx.Done():
 		// Expected
 	default:
-		t.Error("surfaceCtx should be cancelled after calling relayCancel()")
+		t.Error("mirrorCtx should be cancelled after calling mirrorCancel()")
 	}
 }
 
@@ -292,7 +292,7 @@ func TestSupervisor_StartPrism_WrapperFunction(t *testing.T) {
 	}
 }
 
-func TestRelayState_ContextPropagation(t *testing.T) {
+func TestMirrorState_ContextPropagation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create pipe pairs
@@ -308,27 +308,27 @@ func TestRelayState_ContextPropagation(t *testing.T) {
 	}
 	defer childR.Close()
 
-	state, err := activateSurface(ctx, realR, childW)
+	state, err := activateMirror(ctx, realR, childW)
 	if err != nil {
-		t.Fatalf("activateSurface() failed: %v", err)
+		t.Fatalf("activateMirror() failed: %v", err)
 	}
 
 	// Cancel parent context
 	cancel()
 
-	// Verify relay's context is cancelled
+	// Verify mirror's context is cancelled
 	select {
 	case <-state.ctx.Done():
-		// Expected - relay context inherits from parent
+		// Expected - mirror context inherits from parent
 	default:
-		t.Error("relay context should be cancelled when parent is cancelled")
+		t.Error("mirror context should be cancelled when parent is cancelled")
 	}
 
 	// Close pipes before cleanup
 	realR.Close()
 	childW.Close()
 
-	deactivateSurface(state)
+	deactivateMirror(state)
 }
 
 func TestSupervisor_ChildExitChannelBuffered(t *testing.T) {

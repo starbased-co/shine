@@ -55,8 +55,8 @@ func (sm *StateManager) OnPanelPrismCrashed(panel, name string, exitCode, signal
 	// Future: could trigger restart policy or mark panel unhealthy
 }
 
-func (sm *StateManager) OnPanelSurfaceSwitched(panel, from, to string) {
-	log.Printf("State: panel %s - surface switched: %s → %s", panel, from, to)
+func (sm *StateManager) OnPanelForegroundChanged(panel, from, to string) {
+	log.Printf("State: panel %s - foreground changed: %s → %s", panel, from, to)
 	// Future: could track current foreground prism in panel metadata
 }
 

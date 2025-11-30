@@ -34,7 +34,7 @@ func startRPCServer(pm *PanelManager, stateMgr *StateManager, cfgPath string) er
 		"prism/started":   rpc.Handler(h.handlePrismStarted),
 		"prism/stopped":   rpc.Handler(h.handlePrismStopped),
 		"prism/crashed":   rpc.Handler(h.handlePrismCrashed),
-		"surface/switched": rpc.Handler(h.handleSurfaceSwitched),
+		"foreground/changed": rpc.Handler(h.handleForegroundChanged),
 	}
 
 	rpcServer = rpc.NewServer(paths.ShinedSocket(), mux, nil)

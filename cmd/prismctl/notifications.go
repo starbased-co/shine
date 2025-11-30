@@ -148,11 +148,10 @@ func (nm *NotificationManager) OnPrismCrashed(name string, exitCode, signal int)
 	})
 }
 
-// OnSurfaceSwitched notifies shined that foreground changed
-func (nm *NotificationManager) OnSurfaceSwitched(from, to string) {
-	log.Printf("Notification: surface switched %s → %s", from, to)
+func (nm *NotificationManager) OnForegroundChanged(from, to string) {
+	log.Printf("Notification: foreground changed %s → %s", from, to)
 	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
-		return c.NotifySurfaceSwitched(ctx, nm.instance, from, to)
+		return c.NotifyForegroundChanged(ctx, nm.instance, from, to)
 	})
 }
 

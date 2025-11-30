@@ -134,7 +134,7 @@ type PrismCrashedNotification struct {
 	Signal   int    `json:"signal,omitempty"`
 }
 
-type SurfaceSwitchedNotification struct {
+type ForegroundChangedNotification struct {
 	Panel string `json:"panel"`
 	From  string `json:"from"` // previous foreground prism
 	To    string `json:"to"`   // new foreground prism

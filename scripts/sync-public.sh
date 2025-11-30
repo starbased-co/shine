@@ -15,4 +15,4 @@ git filter-repo --invert-paths \
   --force
 
 git remote add origin git@github.com:starbased-co/shine.git
-git push origin main --force
+git push origin main

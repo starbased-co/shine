@@ -19,7 +19,7 @@
 - **Panel** = The Kitty layer shell window spawned by `shined`
 - **Prism** = Panel + `prismctl` supervisor process
 - **Child Processes** = TUI applications (e.g., `clock`, `chat`, `bar`) managed by the supervisor
-- **Surface** = The bidirectional I/O relay between the real PTY and the active child's PTY
+- **Mirror** = The bidirectional I/O relay between the real PTY and the active child's PTY
 
 ```
 ┌─────────────────┐
@@ -39,7 +39,7 @@
 ┌────────┴────────┐
 │      pty_M      │ <- Real terminal PTY master (Kitty's PTY)
 └────────┬────────┘
-        ↓│↑ Surface (bidirectional)
+        ↓│↑ Mirror (bidirectional)
 ┌────────┴────────┐      ┌──────────────┐
 │      pty_S      │<────>│  prismctl    │ <- PTY supervisor (prism-{instance}.sock)
 └─────────────────┘      └─┬────┬────┬──┘
@@ -112,7 +112,7 @@
 - `prism/started {panel, name, pid}`
 - `prism/stopped {panel, name, exit_code}`
 - `prism/crashed {panel, name, exit_code, signal}`
-- `surface/switched {panel, from, to}`
+- `foreground/changed {panel, from, to}`
 
 ## Development Commands
 
@@ -181,7 +181,7 @@ cmd/
   prismctl/           # PTY supervisor
     main.go             # Entry point
     supervisor.go       # Process supervision
-    surface.go          # I/O relay
+    mirror.go           # I/O relay
     pty_manager.go      # PTY allocation
     handlers.go         # RPC handlers
     ipc.go              # RPC server
@@ -228,8 +228,8 @@ pkg/
 - `pkg/config/discovery.go`: Prism discovery from configured directories
 - `pkg/rpc/types.go`: All RPC request/response types and notifications
 - `pkg/state/types.go`: Binary state structures for mmap files
-- `cmd/prismctl/supervisor.go`: Process supervisor with surface switching and MRU
-- `cmd/prismctl/surface.go`: Bidirectional I/O relay
+- `cmd/prismctl/supervisor.go`: Process supervisor with mirror switching and MRU
+- `cmd/prismctl/mirror.go`: Bidirectional I/O relay
 - `cmd/shined/panel_manager.go`: Spawns Kitty panels via remote control
 
 ### Configuration System
@@ -273,7 +273,7 @@ Always use:
 
 **DO NOT MODIFY** these without careful testing:
 
-- 10ms stabilization delay after surface switch
+- 10ms stabilization delay after mirror swap
 - 20ms shutdown grace period (SIGTERM → SIGKILL)
 - Terminal state restoration requires exact sequencing
 

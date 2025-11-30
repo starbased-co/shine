@@ -190,14 +190,13 @@ func TestNotificationDelivery_PrismCrashed(t *testing.T) {
 	}
 }
 
-// TestNotificationDelivery_SurfaceSwitched tests surface switched notification
-func TestNotificationDelivery_SurfaceSwitched(t *testing.T) {
+func TestNotificationDelivery_ForegroundChanged(t *testing.T) {
 	tmpDir := t.TempDir()
 	sockPath := filepath.Join(tmpDir, "shine.sock")
 
-	var receivedNotification *rpc.SurfaceSwitchedNotification
+	var receivedNotification *rpc.ForegroundChangedNotification
 	mux := handler.Map{
-		"notify/surface/switched": handler.New(func(ctx context.Context, n *rpc.SurfaceSwitchedNotification) (*struct{}, error) {
+		"notify/foreground/changed": handler.New(func(ctx context.Context, n *rpc.ForegroundChangedNotification) (*struct{}, error) {
 			receivedNotification = n
 			return &struct{}{}, nil
 		}),
@@ -217,15 +216,14 @@ func TestNotificationDelivery_SurfaceSwitched(t *testing.T) {
 	}
 	defer client.Close()
 
-	// Send notification
-	notification := &rpc.SurfaceSwitchedNotification{
+	notification := &rpc.ForegroundChangedNotification{
 		Panel: "panel-0",
 		From:  "clock",
 		To:    "bar",
 	}
 
 	var ack struct{}
-	err = client.Call(context.Background(), "notify/surface/switched", notification, &ack)
+	err = client.Call(context.Background(), "notify/foreground/changed", notification, &ack)
 	if err != nil {
 		t.Fatalf("notification call error: %v", err)
 	}
@@ -256,7 +254,7 @@ func TestNotificationBatch(t *testing.T) {
 			notifications = append(notifications, "stopped:"+n.Name)
 			return &struct{}{}, nil
 		}),
-		"notify/surface/switched": handler.New(func(ctx context.Context, n *rpc.SurfaceSwitchedNotification) (*struct{}, error) {
+		"notify/foreground/changed": handler.New(func(ctx context.Context, n *rpc.ForegroundChangedNotification) (*struct{}, error) {
 			notifications = append(notifications, "switched:"+n.From+"->"+n.To)
 			return &struct{}{}, nil
 		}),
@@ -289,7 +287,7 @@ func TestNotificationBatch(t *testing.T) {
 		Panel: "panel-0", Name: "bar", PID: 2,
 	}, &ack)
 
-	client.Call(ctx, "notify/surface/switched", &rpc.SurfaceSwitchedNotification{
+	client.Call(ctx, "notify/foreground/changed", &rpc.ForegroundChangedNotification{
 		Panel: "panel-0", From: "clock", To: "bar",
 	}, &ack)
 
