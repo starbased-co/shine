@@ -12,6 +12,7 @@ git filter-repo --invert-paths \
   --path .env \
   --path arc/ \
   --path scripts/sync-public.sh \
+  --path scratch/ \
   --force
 
 git remote add origin git@github.com:starbased-co/shine.git
