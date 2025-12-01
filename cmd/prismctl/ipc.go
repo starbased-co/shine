@@ -13,7 +13,7 @@ import (
 )
 
 func startRPCServer(instance string, supervisor *supervisor, stateMgr *StateManager) (*rpc.Server, error) {
-	// Create runtime directory
+	// ensure directory 
 	runtimeDir := paths.RuntimeDir()
 	if err := os.MkdirAll(runtimeDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create runtime directory: %w", err)

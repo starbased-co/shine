@@ -7,17 +7,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// terminalState holds the saved terminal state for restoration
 type terminalState struct {
 	savedTermios *unix.Termios
 	fd           int
 }
 
-// newTerminalState saves the initial terminal state
 func newTerminalState() (*terminalState, error) {
 	fd := int(os.Stdin.Fd())
 
-	// Save initial termios settings
 	termios, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terminal attributes: %w", err)
@@ -31,6 +28,10 @@ func newTerminalState() (*terminalState, error) {
 
 // resetTerminalState resets the terminal to canonical mode and clears visual state
 // This MUST be called after EVERY child exit (clean or crash) to prevent terminal corruption
+// - What does canonical mean? https://www.gnu.org/software/libc/manual/html_node/Canonical-or-Not.html
+// - TCGETS: termios control get settings
+// - TCSETS: termios control set settings (immediate)
+//   - See also TCSETSW and TCSETSF, which respectively wait to apply settings until output drained or input flushed 
 func (ts *terminalState) resetTerminalState() error {
 	// 1. Reset termios to canonical mode
 	termios, err := unix.IoctlGetTermios(ts.fd, unix.TCGETS)
@@ -38,13 +39,11 @@ func (ts *terminalState) resetTerminalState() error {
 		return fmt.Errorf("failed to get current terminal attributes: %w", err)
 	}
 
-	// Set canonical mode flags
 	termios.Lflag |= unix.ICANON | unix.ECHO | unix.ISIG
 	termios.Lflag &^= unix.IEXTEN
 	termios.Iflag |= unix.ICRNL
 	termios.Iflag &^= unix.INLCR
 
-	// Apply settings immediately with TCSETS (Linux equivalent of TCSANOW)
 	if err := unix.IoctlSetTermios(ts.fd, unix.TCSETS, termios); err != nil {
 		return fmt.Errorf("failed to set terminal attributes: %w", err)
 	}
@@ -65,7 +64,6 @@ func (ts *terminalState) resetTerminalState() error {
 	return nil
 }
 
-// restoreTerminalState restores the terminal to its original saved state
 func (ts *terminalState) restoreTerminalState() error {
 	if ts.savedTermios == nil {
 		return fmt.Errorf("no saved terminal state to restore")

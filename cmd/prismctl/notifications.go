@@ -10,7 +10,6 @@ import (
 	"github.com/starbased-co/shine/pkg/rpc"
 )
 
-// with graceful degradation when shined is unavailable
 type NotificationManager struct {
 	mu         sync.Mutex
 	client     *rpc.ShinedClient
@@ -59,7 +58,6 @@ func (nm *NotificationManager) connectionLoop() {
 			continue
 		}
 
-		// Attempt connection
 		sockPath := paths.ShinedSocket()
 		client, err := rpc.NewShinedClient(sockPath, rpc.WithTimeout(2*time.Second))
 
@@ -85,7 +83,6 @@ func (nm *NotificationManager) connectionLoop() {
 	}
 }
 
-// tryReconnect signals the connection loop to attempt reconnection
 func (nm *NotificationManager) tryReconnect() {
 	select {
 	case nm.reconnectC <- struct{}{}:
@@ -124,7 +121,6 @@ func (nm *NotificationManager) sendNotification(fn func(context.Context, *rpc.Sh
 	}
 }
 
-// OnPrismStarted notifies shined that a prism started
 func (nm *NotificationManager) OnPrismStarted(name string, pid int) {
 	log.Printf("Notification: prism started %s (PID %d)", name, pid)
 	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
@@ -132,7 +128,6 @@ func (nm *NotificationManager) OnPrismStarted(name string, pid int) {
 	})
 }
 
-// OnPrismStopped notifies shined that a prism stopped normally
 func (nm *NotificationManager) OnPrismStopped(name string, exitCode int) {
 	log.Printf("Notification: prism stopped %s (exit=%d)", name, exitCode)
 	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {
@@ -140,7 +135,6 @@ func (nm *NotificationManager) OnPrismStopped(name string, exitCode int) {
 	})
 }
 
-// OnPrismCrashed notifies shined that a prism crashed
 func (nm *NotificationManager) OnPrismCrashed(name string, exitCode, signal int) {
 	log.Printf("Notification: prism crashed %s (exit=%d, signal=%d)", name, exitCode, signal)
 	nm.sendNotification(func(ctx context.Context, c *rpc.ShinedClient) error {

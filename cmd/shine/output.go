@@ -72,7 +72,6 @@ func (t *Table) Render() string {
 		return styleMuted.Render("(no data)")
 	}
 
-	// Calculate column widths
 	colWidths := make([]int, len(t.Headers))
 	for i, header := range t.Headers {
 		colWidths[i] = len(header)
@@ -87,7 +86,6 @@ func (t *Table) Render() string {
 
 	var sb strings.Builder
 
-	// Render header
 	for i, header := range t.Headers {
 		sb.WriteString(styleBold.Render(padRight(header, colWidths[i])))
 		if i < len(t.Headers)-1 {
@@ -96,7 +94,6 @@ func (t *Table) Render() string {
 	}
 	sb.WriteString("\n")
 
-	// Render separator
 	for i, width := range colWidths {
 		sb.WriteString(strings.Repeat("─", width))
 		if i < len(colWidths)-1 {
@@ -105,7 +102,6 @@ func (t *Table) Render() string {
 	}
 	sb.WriteString("\n")
 
-	// Render rows
 	for _, row := range t.Rows {
 		for i, cell := range row {
 			sb.WriteString(padRight(cell, colWidths[i]))

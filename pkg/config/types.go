@@ -26,7 +26,6 @@ type CoreConfig struct {
 	Path interface{} `toml:"path"`
 }
 
-// GetPaths normalizes the Path field to []string
 func (cc *CoreConfig) GetPaths() []string {
 	if cc.Path == nil {
 		return []string{}
@@ -108,7 +107,6 @@ func (pc *PrismConfig) GetApps() map[string]*AppConfig {
 	if pc.IsMultiApp() {
 		return pc.Apps
 	}
-	// Single-app mode: create synthetic app from Path
 	if pc.Path != "" || pc.ResolvedPath != "" {
 		name := pc.Name
 		return map[string]*AppConfig{

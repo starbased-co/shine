@@ -64,10 +64,6 @@ func activateMirror(ctx context.Context, realPTY *os.File, childPTY *os.File) (*
 	go func() {
 		defer state.wg.Done()
 		if _, err := io.Copy(os.Stdout, childPTY); err != nil {
-			// These errors are normal during shutdown/swap:
-			// - EOF: clean close
-			// - ErrClosedPipe: pipe closed
-			// - "input/output error": PTY closed (ENXIO/EIO)
 			if err != io.EOF && err != io.ErrClosedPipe && !isExpectedPTYError(err) {
 				log.Printf("Mirror (child→real) error: %v", err)
 			}

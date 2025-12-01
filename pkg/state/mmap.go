@@ -120,7 +120,6 @@ func (m *MappedFile) Remove() error {
 }
 
 // AsPtr returns an unsafe pointer to the mapped data.
-// UNSAFE: The caller must ensure the pointer is used correctly.
 func (m *MappedFile) AsPtr() unsafe.Pointer {
 	return unsafe.Pointer(&m.data[0])
 }

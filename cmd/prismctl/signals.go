@@ -29,7 +29,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// signalHandler manages all signal handling for prismctl
 type signalHandler struct {
 	sigCh      chan os.Signal
 	supervisor *supervisor

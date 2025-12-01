@@ -38,15 +38,11 @@ func (s *StateManager) OnPrismStarted(name string, pid int, fg bool) {
 
 func (s *StateManager) OnPrismStopped(name string) {
 	log.Printf("State: prism stopped %s", name)
-
-	// Remove prism from state
 	s.writer.RemovePrism(name)
 }
 
 func (s *StateManager) OnForegroundChanged(name string) {
 	log.Printf("State: foreground changed to %s", name)
-
-	// Update foreground prism
 	s.writer.SetForeground(name)
 }
 
@@ -55,7 +51,6 @@ func (s *StateManager) OnPrismResumed(name string) {
 	s.OnForegroundChanged(name)
 }
 
-// UpdatePrism updates a prism's state in the mmap file
 func (s *StateManager) UpdatePrism(index int, name string, pid int, fg bool, restarts uint8) {
 	stateVal := state.PrismStateBg
 	if fg {
@@ -67,23 +62,19 @@ func (s *StateManager) UpdatePrism(index int, name string, pid int, fg bool, res
 	}
 }
 
-// Sync forces a sync to disk
 func (s *StateManager) Sync() error {
 	return s.writer.Sync()
 }
 
-// Close closes the state writer
 func (s *StateManager) Close() error {
 	return s.writer.Close()
 }
 
-// Remove closes and removes the state file
 func (s *StateManager) Remove() error {
 	log.Printf("State: removing state file at %s", s.writer.Path())
 	return s.writer.Remove()
 }
 
-// Path returns the state file path
 func (s *StateManager) Path() string {
 	return s.writer.Path()
 }

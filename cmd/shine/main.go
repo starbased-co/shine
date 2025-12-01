@@ -15,7 +15,6 @@ func main() {
 
 	command := os.Args[1]
 
-	// Handle flags
 	switch command {
 	case "-h", "--help":
 		showHelp("")
@@ -32,7 +31,6 @@ func main() {
 		return
 	}
 
-	// Execute command
 	var err error
 	switch command {
 	case "start":

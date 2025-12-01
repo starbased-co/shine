@@ -25,7 +25,6 @@ func init() {
 	}
 }
 
-// displays help for a specific topic or general usage
 func showHelp(topic string) {
 	output, err := registry.Render(topic, help.RenderOptions{Width: 100})
 	if err != nil {

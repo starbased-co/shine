@@ -13,7 +13,6 @@ var ipcHelp string
 //go:embed help/signals.md
 var signalsHelp string
 
-// CommandHelp defines structured metadata for help topics
 type CommandHelp struct {
 	Name        string   // Topic name
 	Category    string   // Topic category for grouping
@@ -25,7 +24,6 @@ type CommandHelp struct {
 	SeeAlso     []string // Additional topics/resources
 }
 
-// helpRegistry contains all help topic metadata
 var helpRegistry = map[string]*CommandHelp{
 	"usage": {
 		Name:     "usage",

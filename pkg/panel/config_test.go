@@ -280,7 +280,7 @@ func TestFocusPolicyParsing(t *testing.T) {
 	}
 }
 
-func TestToKittenArgs_Center(t *testing.T) {
+func TestToPanelArgs_Center(t *testing.T) {
 	cfg := &Config{
 		Type:       LayerShellPanel,
 		Origin:     OriginCenter,
@@ -289,38 +289,38 @@ func TestToKittenArgs_Center(t *testing.T) {
 		OutputName: "DP-2",
 	}
 
-	args := cfg.ToKittenArgs("/usr/bin/component")
+	args := cfg.ToPanelArgs("/usr/bin/component")
 
 	found := false
 	for _, arg := range args {
-		if arg == "--edge=center" {
+		if arg == "edge=center" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("ToKittenArgs() with center origin should include --edge=center, got %v", args)
+		t.Errorf("ToPanelArgs() with center origin should include edge=center, got %v", args)
 	}
 
 	foundWidth := false
 	foundHeight := false
 	for _, arg := range args {
-		if arg == "--columns=200px" {
+		if arg == "columns=200px" {
 			foundWidth = true
 		}
-		if arg == "--lines=100px" {
+		if arg == "lines=100px" {
 			foundHeight = true
 		}
 	}
 	if !foundWidth {
-		t.Errorf("ToKittenArgs() missing --columns=200px in %v", args)
+		t.Errorf("ToPanelArgs() missing columns=200px in %v", args)
 	}
 	if !foundHeight {
-		t.Errorf("ToKittenArgs() missing --lines=100px in %v", args)
+		t.Errorf("ToPanelArgs() missing lines=100px in %v", args)
 	}
 }
 
-func TestToKittenArgs_TopRightCorner(t *testing.T) {
+func TestToPanelArgs_TopRightCorner(t *testing.T) {
 	cfg := &Config{
 		Type:       LayerShellPanel,
 		Origin:     OriginTopRight,
@@ -329,21 +329,21 @@ func TestToKittenArgs_TopRightCorner(t *testing.T) {
 		OutputName: "DP-2",
 	}
 
-	args := cfg.ToKittenArgs("/usr/bin/component")
+	args := cfg.ToPanelArgs("/usr/bin/component")
 
 	found := false
 	for _, arg := range args {
-		if arg == "--edge=top" {
+		if arg == "edge=top" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("ToKittenArgs() with top-right origin should include --edge=top, got %v", args)
+		t.Errorf("ToPanelArgs() with top-right origin should include edge=top, got %v", args)
 	}
 }
 
-func TestToKittenArgs_StandardFlags(t *testing.T) {
+func TestToPanelArgs_StandardFlags(t *testing.T) {
 	cfg := &Config{
 		Type:             LayerShellPanel,
 		Origin:           OriginTopCenter,
@@ -356,26 +356,23 @@ func TestToKittenArgs_StandardFlags(t *testing.T) {
 		ListenSocket:     "/tmp/test.sock",
 	}
 
-	args := cfg.ToKittenArgs("/usr/bin/component")
+	args := cfg.ToPanelArgs("/usr/bin/component")
 
-	expectedFlags := []string{
-		"--edge=top",
-		"--columns=80",
-		"--lines=1",
-		"--focus-policy=on-demand",
-		"--hide-on-focus-loss",
-		"--single-instance",
-		"--instance-group=shine",
-		"--toggle-visibility",
-		"--output-name=DP-2",
-		"-o",
-		"allow_remote_control=socket-only",
-		"-o",
-		"listen_on=unix:/tmp/test.sock",
-		"/usr/bin/component",
+	// Check standard args format
+	if len(args) < 3 || args[0] != "@" || args[1] != "launch" || args[2] != "--type=os-panel" {
+		t.Errorf("ToPanelArgs() should start with [@, launch, --type=os-panel], got %v", args[:3])
 	}
 
-	for _, expected := range expectedFlags {
+	// Panel properties are in key=value format with --os-panel prefix
+	expectedPanelProps := []string{
+		"edge=top",
+		"columns=80",
+		"lines=1",
+		"focus-policy=on-demand",
+		"output-name=DP-2",
+	}
+
+	for _, expected := range expectedPanelProps {
 		found := false
 		for _, arg := range args {
 			if arg == expected {
@@ -384,12 +381,17 @@ func TestToKittenArgs_StandardFlags(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("ToKittenArgs() missing expected flag %q in %v", expected, args)
+			t.Errorf("ToPanelArgs() missing expected panel prop %q in %v", expected, args)
 		}
+	}
+
+	// Component path should be last
+	if args[len(args)-1] != "/usr/bin/component" {
+		t.Errorf("ToPanelArgs() component path should be last, got %v", args)
 	}
 }
 
-func TestToKittenArgs_PixelDimensions(t *testing.T) {
+func TestToPanelArgs_PixelDimensions(t *testing.T) {
 	cfg := &Config{
 		Type:       LayerShellPanel,
 		Origin:     OriginBottomCenter,
@@ -398,28 +400,28 @@ func TestToKittenArgs_PixelDimensions(t *testing.T) {
 		OutputName: "DP-2",
 	}
 
-	args := cfg.ToKittenArgs("/usr/bin/component")
+	args := cfg.ToPanelArgs("/usr/bin/component")
 
 	foundWidth := false
 	foundHeight := false
 	for _, arg := range args {
-		if arg == "--columns=600px" {
+		if arg == "columns=600px" {
 			foundWidth = true
 		}
-		if arg == "--lines=120px" {
+		if arg == "lines=120px" {
 			foundHeight = true
 		}
 	}
 
 	if !foundWidth {
-		t.Errorf("ToKittenArgs() missing --columns=600px in %v", args)
+		t.Errorf("ToPanelArgs() missing columns=600px in %v", args)
 	}
 	if !foundHeight {
-		t.Errorf("ToKittenArgs() missing --lines=120px in %v", args)
+		t.Errorf("ToPanelArgs() missing lines=120px in %v", args)
 	}
 }
 
-func TestToRemoteControlArgs(t *testing.T) {
+func TestToPanelArgs_WithTitle(t *testing.T) {
 	cfg := &Config{
 		Type:        LayerShellPanel,
 		Origin:      OriginCenter,
@@ -430,10 +432,10 @@ func TestToRemoteControlArgs(t *testing.T) {
 		OutputName:  "DP-2",
 	}
 
-	args := cfg.ToRemoteControlArgs("/usr/bin/component")
+	args := cfg.ToPanelArgs("/usr/bin/component")
 
 	if len(args) < 3 || args[0] != "@" || args[1] != "launch" || args[2] != "--type=os-panel" {
-		t.Errorf("ToRemoteControlArgs() should start with [@, launch, --type=os-panel], got %v", args[:3])
+		t.Errorf("ToPanelArgs() should start with [@, launch, --type=os-panel], got %v", args[:3])
 	}
 
 	foundTitle := false
@@ -444,11 +446,11 @@ func TestToRemoteControlArgs(t *testing.T) {
 		}
 	}
 	if !foundTitle {
-		t.Errorf("ToRemoteControlArgs() missing --title test-window in %v", args)
+		t.Errorf("ToPanelArgs() missing --title test-window in %v", args)
 	}
 
 	if args[len(args)-1] != "/usr/bin/component" {
-		t.Errorf("ToRemoteControlArgs() component path should be last, got %v", args)
+		t.Errorf("ToPanelArgs() component path should be last, got %v", args)
 	}
 }
 
@@ -493,7 +495,7 @@ func TestOriginCenterSized(t *testing.T) {
 		}
 	})
 
-	t.Run("ToRemoteControlArgs omits margin args", func(t *testing.T) {
+	t.Run("ToPanelArgs omits margin args", func(t *testing.T) {
 		cfg := &Config{
 			Origin:     OriginCenterSized,
 			Width:      Dimension{Value: 400, IsPixels: true},
@@ -501,7 +503,7 @@ func TestOriginCenterSized(t *testing.T) {
 			OutputName: "DP-2",
 		}
 
-		args := cfg.ToRemoteControlArgs("/usr/bin/prism")
+		args := cfg.ToPanelArgs("/usr/bin/prism")
 
 		hasEdge := false
 		for _, arg := range args {
@@ -580,7 +582,7 @@ func TestOriginCenterFourMargins(t *testing.T) {
 		}
 	})
 
-	t.Run("ToRemoteControlArgs includes all four margins", func(t *testing.T) {
+	t.Run("ToPanelArgs includes all four margins", func(t *testing.T) {
 		cfg := &Config{
 			Origin:     OriginCenter,
 			Width:      Dimension{Value: 400, IsPixels: true},
@@ -589,7 +591,7 @@ func TestOriginCenterFourMargins(t *testing.T) {
 			OutputName: "DP-2",
 		}
 
-		args := cfg.ToRemoteControlArgs("/usr/bin/prism")
+		args := cfg.ToPanelArgs("/usr/bin/prism")
 
 		hasEdge := false
 		hasTop := false

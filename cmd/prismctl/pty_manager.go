@@ -17,15 +17,13 @@ func allocatePTY() (master, slave *os.File, err error) {
 }
 
 // syncTerminalSize copies terminal size from source FD to target FD
-// will be important function for more complex multiplexing i.e. multi-app/split window
+// NOTE: will be important function for more complex multiplexing i.e. multi-app/split window
 func syncTerminalSize(sourceFd, targetFd int) error {
-	// Get window size from source terminal
 	sourceWinsize, err := unix.IoctlGetWinsize(sourceFd, unix.TIOCGWINSZ)
 	if err != nil {
 		return fmt.Errorf("failed to get source terminal size: %w", err)
 	}
 
-	// Set window size on target PTY
 	if err := unix.IoctlSetWinsize(targetFd, unix.TIOCSWINSZ, sourceWinsize); err != nil {
 		return fmt.Errorf("failed to set target terminal size: %w", err)
 	}
@@ -33,7 +31,6 @@ func syncTerminalSize(sourceFd, targetFd int) error {
 	return nil
 }
 
-// closePTY safely closes a PTY master FD
 func closePTY(master *os.File) error {
 	if master == nil {
 		return nil

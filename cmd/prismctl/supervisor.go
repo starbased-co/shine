@@ -210,13 +210,11 @@ func (s *supervisor) resumeToForeground(targetIdx int) error {
 		log.Printf("Warning: failed to SIGCONT %s: %v", target.name, err)
 	}
 
-	// CRITICAL: Reset terminal state
 	log.Printf("Resetting terminal state")
 	if err := s.termState.resetTerminalState(); err != nil {
 		log.Printf("Warning: failed to reset terminal state: %v", err)
 	}
 
-	// Stabilization delay
 	time.Sleep(10 * time.Millisecond)
 
 	if err := syncTerminalSize(int(os.Stdin.Fd()), int(target.ptyMaster.Fd())); err != nil {
@@ -449,7 +447,6 @@ func (s *supervisor) shutdown() {
 	fmt.Println("[ ] Exiting... ")
 }
 
-// isShuttingDown checks if shutdown is in progress
 func (s *supervisor) isShuttingDown() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -208,34 +208,23 @@ func (p Position) String() string {
 }
 
 type Config struct {
-	// Layer shell properties
 	Type        LayerType
 	Origin      Origin
 	FocusPolicy FocusPolicy
 
-	// Size
-	Width  Dimension // Width in columns or pixels (e.g., 80 or "1200px")
-	Height Dimension // Height in lines or pixels (e.g., 24 or "600px")
+	Width    Dimension // Width in columns or pixels (e.g., 80 or "1200px")
+	Height   Dimension // Height in lines or pixels (e.g., 24 or "600px")
+	Position Position  // Offset as "x,y" (e.g., "10,50")
 
-	// Position offset from origin (horizontal, vertical) in pixels
-	Position Position // Offset as "x,y" (e.g., "10,50")
-
-	// Exclusive zone
 	ExclusiveZone         int
 	OverrideExclusiveZone bool
 
-	// Behavior
 	HideOnFocusLoss  bool
 	ToggleVisibility bool
 
-	// Output (CRITICAL: Must be DP-2, never DP-1)
-	OutputName string // Monitor name (e.g., "DP-2")
-
-	// Remote control
+	OutputName   string // Monitor name (e.g., "DP-2") - CRITICAL: Must be DP-2, never DP-1
 	ListenSocket string // Unix socket path
-
-	// Window identification
-	WindowTitle string // Window title for targeting specific windows
+	WindowTitle  string // Window title for targeting specific windows
 }
 
 func NewConfig() *Config {
@@ -373,7 +362,7 @@ func (c *Config) calculateMargins() (top, left, bottom, right int, err error) {
 	return top, left, bottom, right, nil
 }
 
-func (c *Config) ToRemoteControlArgs(componentPath string) []string {
+func (c *Config) ToPanelArgs(componentPath string) []string {
 	args := []string{
 		"@",
 		"launch",
@@ -387,7 +376,6 @@ func (c *Config) ToRemoteControlArgs(componentPath string) []string {
 		panelProps = append(panelProps, fmt.Sprintf("edge=%s", edgeStr))
 	}
 
-	// Size
 	if c.Width.Value > 0 {
 		panelProps = append(panelProps, fmt.Sprintf("columns=%s", c.Width.String()))
 	}
@@ -411,7 +399,6 @@ func (c *Config) ToRemoteControlArgs(componentPath string) []string {
 		}
 	}
 
-	// Focus policy
 	if c.FocusPolicy != FocusNotAllowed {
 		panelProps = append(panelProps, fmt.Sprintf("focus-policy=%s", c.FocusPolicy.String()))
 	}
@@ -433,69 +420,3 @@ func (c *Config) ToRemoteControlArgs(componentPath string) []string {
 	return args
 }
 
-func (c *Config) ToKittenArgs(component string) []string {
-	args := []string{"panel"}
-
-	edgeStr := c.originToEdge()
-	args = append(args, "--edge="+edgeStr)
-
-	if c.Type != LayerShellPanel {
-		args = append(args, "--layer="+c.Type.String())
-	}
-
-	// Size
-	if c.Width.Value > 0 {
-		args = append(args, "--columns="+c.Width.String())
-	}
-	if c.Height.Value > 0 {
-		args = append(args, "--lines="+c.Height.String())
-	}
-
-	top, left, bottom, right, err := c.calculateMargins()
-	if err == nil {
-		if top > 0 {
-			args = append(args, fmt.Sprintf("--margin-top=%d", top))
-		}
-		if left > 0 {
-			args = append(args, fmt.Sprintf("--margin-left=%d", left))
-		}
-		if bottom > 0 {
-			args = append(args, fmt.Sprintf("--margin-bottom=%d", bottom))
-		}
-		if right > 0 {
-			args = append(args, fmt.Sprintf("--margin-right=%d", right))
-		}
-	}
-
-	// Focus policy
-	if c.FocusPolicy != FocusNotAllowed {
-		args = append(args, "--focus-policy="+c.FocusPolicy.String())
-	}
-
-	if c.OverrideExclusiveZone {
-		args = append(args, fmt.Sprintf("--exclusive-zone=%d", c.ExclusiveZone))
-		args = append(args, "--override-exclusive-zone")
-	}
-
-	if c.HideOnFocusLoss {
-		args = append(args, "--hide-on-focus-loss")
-	}
-	args = append(args, "--single-instance")
-	args = append(args, "--instance-group=shine")
-	if c.ToggleVisibility {
-		args = append(args, "--toggle-visibility")
-	}
-
-	if c.OutputName != "" {
-		args = append(args, "--output-name="+c.OutputName)
-	}
-
-	if c.ListenSocket != "" {
-		args = append(args, "-o", "allow_remote_control=socket-only")
-		args = append(args, "-o", "listen_on=unix:"+c.ListenSocket)
-	}
-
-	args = append(args, component)
-
-	return args
-}

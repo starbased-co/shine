@@ -119,7 +119,7 @@ func (pm *PanelManager) SpawnPanel(config *PrismEntry, instanceName string) (*Pa
 
 	panelCfg := config.ToPanelConfig()
 	prismctlArgs := []string{instanceName}
-	kittenArgs := panelCfg.ToRemoteControlArgs(pm.prismctlBin)
+	kittenArgs := panelCfg.ToPanelArgs(pm.prismctlBin)
 	kittenArgs = append(kittenArgs, prismctlArgs...)
 	cmd := exec.Command("kitten", kittenArgs...)
 	output, err := cmd.CombinedOutput()
@@ -329,7 +329,7 @@ func (pm *PanelManager) handlePanelCrash(panel *Panel) {
 func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, instanceName string) (*Panel, error) {
 	panelCfg := config.ToPanelConfig()
 	prismctlArgs := []string{instanceName}
-	kittenArgs := panelCfg.ToRemoteControlArgs(pm.prismctlBin)
+	kittenArgs := panelCfg.ToPanelArgs(pm.prismctlBin)
 	kittenArgs = append(kittenArgs, prismctlArgs...)
 	cmd := exec.Command("kitten", kittenArgs...)
 	output, err := cmd.CombinedOutput()
@@ -357,12 +357,10 @@ func (pm *PanelManager) spawnPanelUnlocked(config *PrismEntry, instanceName stri
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Verify socket was created
 	if _, err := os.Stat(socketPath); err != nil {
 		return nil, fmt.Errorf("prismctl socket not created within timeout")
 	}
 
-	// Create RPC client
 	rpcClient, err := rpc.NewPrismClient(socketPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RPC client: %w", err)

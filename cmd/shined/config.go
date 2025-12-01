@@ -57,7 +57,6 @@ func (pe *PrismEntry) ValidateRestartPolicy() error {
 	return config.ValidateRestartDelay(pe.RestartDelay)
 }
 
-// GetApps returns app configurations from the underlying PrismConfig
 func (pe *PrismEntry) GetApps() map[string]*config.AppConfig {
 	return pe.PrismConfig.GetApps()
 }

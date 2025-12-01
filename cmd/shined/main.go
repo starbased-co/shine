@@ -117,7 +117,6 @@ func main() {
 
 	log.Println("shined is running (Ctrl+C to stop)")
 
-	// Main event loop
 	for {
 		select {
 		case sig := <-sigCh:
@@ -155,7 +154,6 @@ func setupLogging() *os.File {
 		log.Fatalf("Failed to open log file: %v", err)
 	}
 
-	// Log to both stdout and file
 	log.SetOutput(logFile)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
@@ -174,7 +172,6 @@ func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry, stateMgr *St
 			return fmt.Errorf("failed to spawn panel for %s: %w", entry.Name, err)
 		}
 
-		// Update state with spawned panel
 		healthy := pm.CheckHealth(panel)
 		stateMgr.OnPanelSpawned(panel.Instance, panel.Name, panel.PID, healthy)
 
@@ -188,7 +185,6 @@ func spawnConfiguredPanels(pm *PanelManager, entries []*PrismEntry, stateMgr *St
 func reloadConfig(pm *PanelManager, configPath string) error {
 	log.Println("Reloading configuration...")
 
-	// Load new config using pkg/config
 	pkgCfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -198,7 +194,6 @@ func reloadConfig(pm *PanelManager, configPath string) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	// Convert to PrismEntry slice
 	newEntries := make([]*PrismEntry, 0)
 	for name, pc := range pkgCfg.Prisms {
 		if !pc.Enabled || pc.ResolvedPath == "" {

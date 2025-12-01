@@ -12,14 +12,12 @@ import (
 //go:embed templates/*
 var templateFS embed.FS
 
-// prismTemplateData holds data for template rendering
 type prismTemplateData struct {
 	Name       string // Prism name (e.g., "myprism")
 	NameTitle  string // Title case name (e.g., "Myprism")
 	WindowName string // Window name (e.g., "shine-myprism")
 }
 
-// newPrism creates a new prism from template
 func newPrism(name string) error {
 	if name == "" {
 		return fmt.Errorf("prism name is required")
@@ -38,24 +36,20 @@ func newPrism(name string) error {
 
 	targetDir := filepath.Join(homeDir, ".config", "shine", "prisms", name)
 
-	// Check if directory already exists
 	if _, err := os.Stat(targetDir); !os.IsNotExist(err) {
 		return fmt.Errorf("prism directory already exists: %s", targetDir)
 	}
 
-	// Create directory
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Prepare template data
 	data := prismTemplateData{
 		Name:       name,
 		NameTitle:  strings.Title(strings.ReplaceAll(name, "-", " ")),
 		WindowName: fmt.Sprintf("shine-%s", name),
 	}
 
-	// Files to generate
 	files := map[string]string{
 		"main.go":    "templates/main.go.tmpl",
 		"go.mod":     "templates/go.mod.tmpl",
@@ -64,34 +58,28 @@ func newPrism(name string) error {
 		".gitignore": "templates/gitignore.tmpl",
 	}
 
-	// Generate each file
 	for filename, tmplPath := range files {
 		if err := generateFile(targetDir, filename, tmplPath, data); err != nil {
 			return fmt.Errorf("failed to generate %s: %w", filename, err)
 		}
 	}
 
-	// Print success message with instructions
 	printSuccessMessage(name, targetDir)
 
 	return nil
 }
 
-// generateFile generates a single file from template
 func generateFile(targetDir, filename, tmplPath string, data prismTemplateData) error {
-	// Read template from embedded FS
 	tmplContent, err := templateFS.ReadFile(tmplPath)
 	if err != nil {
 		return fmt.Errorf("failed to read template: %w", err)
 	}
 
-	// Parse template
 	tmpl, err := template.New(filename).Parse(string(tmplContent))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Create target file
 	targetPath := filepath.Join(targetDir, filename)
 	f, err := os.Create(targetPath)
 	if err != nil {
@@ -99,7 +87,6 @@ func generateFile(targetDir, filename, tmplPath string, data prismTemplateData) 
 	}
 	defer f.Close()
 
-	// Execute template
 	if err := tmpl.Execute(f, data); err != nil {
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
@@ -107,7 +94,6 @@ func generateFile(targetDir, filename, tmplPath string, data prismTemplateData) 
 	return nil
 }
 
-// isValidPrismName checks if name follows naming conventions
 func isValidPrismName(name string) bool {
 	if len(name) == 0 {
 		return false
@@ -122,7 +108,6 @@ func isValidPrismName(name string) bool {
 	return true
 }
 
-// printSuccessMessage prints instructions after successful creation
 func printSuccessMessage(name, targetDir string) {
 	fmt.Printf("\n✓ Successfully created prism: %s\n", name)
 	fmt.Printf("  Location: %s\n\n", targetDir)

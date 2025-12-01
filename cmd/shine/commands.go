@@ -43,24 +43,7 @@ func discoverPrismInstances() ([]string, error) {
 	return instances, nil
 }
 
-// findPrismctlSockets finds all prismctl sockets (legacy helper)
-func findPrismctlSockets() ([]string, error) {
-	instances, err := discoverPrismInstances()
-	if err != nil {
-		return nil, err
-	}
-
-	sockets := make([]string, len(instances))
-	for i, instance := range instances {
-		sockets[i] = paths.PrismSocket(instance)
-	}
-
-	return sockets, nil
-}
-
-
 func cmdStart() error {
-	// Check if shined is already running
 	if isShinedRunning() {
 		Success("shined is already running")
 		return nil
@@ -68,7 +51,6 @@ func cmdStart() error {
 
 	Info("Starting shined service...")
 
-	// Find shined binary
 	shinedBin, err := exec.LookPath("shined")
 	if err != nil {
 		return fmt.Errorf("shined not found in PATH: %w", err)
@@ -101,7 +83,6 @@ func cmdStop() error {
 
 	ctx := context.Background()
 
-	// Try shined first
 	if isShinedRunning() {
 		client, err := connectShined()
 		if err != nil {
@@ -109,12 +90,10 @@ func cmdStop() error {
 		} else {
 			defer client.Close()
 
-			// Get panel list
 			result, err := client.Status(ctx)
 			if err != nil {
 				Warning(fmt.Sprintf("Failed to query shined status: %v", err))
 			} else {
-				// Shutdown each panel via shined
 				for _, panel := range result.Panels {
 					Muted(fmt.Sprintf("Stopping %s...", panel.Instance))
 					_, err := client.KillPanel(ctx, panel.Instance)
@@ -139,7 +118,6 @@ func cmdStop() error {
 		return nil
 	}
 
-	// Send shutdown command to each panel
 	var stopped int
 	for _, instance := range instances {
 		Muted(fmt.Sprintf("Stopping %s...", instance))
@@ -210,10 +188,8 @@ func displayStateFromMmap(instance string, s *state.PrismRuntimeState) {
 		bgCount = len(activePrisms)
 	}
 
-	// Display status box
 	fmt.Println(StatusBox(fgName, bgCount, len(activePrisms)))
 
-	// Show prisms table
 	if len(activePrisms) > 0 {
 		table := NewTable("Prism", "PID", "State", "Uptime")
 		for _, prism := range activePrisms {
@@ -248,10 +224,8 @@ func displayStateFromRPC(instance string, prisms []rpc.PrismInfo) {
 		}
 	}
 
-	// Display status box
 	fmt.Println(StatusBox(fgName, bgCount, len(prisms)))
 
-	// Show prisms table
 	if len(prisms) > 0 {
 		table := NewTable("Prism", "PID", "State", "Uptime")
 		for _, prism := range prisms {
@@ -318,7 +292,6 @@ func cmdStatus() error {
 
 	Header(fmt.Sprintf("Shine Status (%d panel(s))", len(instances)))
 
-	// Query each panel
 	for _, instance := range instances {
 		displayPanelStatus(ctx, instance)
 	}
@@ -369,7 +342,6 @@ func cmdLogs(panelID string) error {
 	logDir := filepath.Join(home, ".local", "share", "shine", "logs")
 
 	if panelID == "" {
-		// Show all logs
 		Info(fmt.Sprintf("Log directory: %s", logDir))
 
 		files, err := os.ReadDir(logDir)
@@ -401,18 +373,16 @@ func cmdLogs(panelID string) error {
 		return nil
 	}
 
-	// Show specific log file
 	logPath := filepath.Join(logDir, panelID)
 	if !strings.HasSuffix(logPath, ".log") {
 		logPath += ".log"
 	}
 
-	// Check if file exists
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		return fmt.Errorf("log file not found: %s", logPath)
 	}
 
-	// Tail the log file (last 50 lines)
+	// last 50 lines for now. TODO: enrich log output later
 	cmd := exec.Command("tail", "-n", "50", logPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -424,6 +394,7 @@ func cmdLogs(panelID string) error {
 	return nil
 }
 
+// TODO: remove/redo this way of getting instance name.
 func extractInstanceName(socketPath string) string {
 	base := filepath.Base(socketPath)
 	// Remove "prism-" prefix and ".sock" suffix

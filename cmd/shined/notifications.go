@@ -38,7 +38,6 @@ func (h *Handlers) handlePrismCrashed(ctx context.Context, n *rpc.PrismCrashedNo
 		h.state.OnPanelPrismCrashed(n.Panel, n.Name, n.ExitCode, n.Signal)
 	}
 
-	// Trigger restart policy based on exit code
 	h.pm.TriggerRestartPolicy(n.Panel, n.Name, n.ExitCode)
 
 	return &NotificationAck{}, nil

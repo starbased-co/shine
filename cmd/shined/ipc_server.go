@@ -13,7 +13,6 @@ import (
 var rpcServer *rpc.Server
 
 func startRPCServer(pm *PanelManager, stateMgr *StateManager, cfgPath string) error {
-	// ensure directory
 	runtimeDir := paths.RuntimeDir()
 	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
 		return err
