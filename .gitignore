@@ -47,7 +47,3 @@ logs/
 .DS_Store
 Thumbs.db
 
-# llmdocs ctx repositories (cloned, not committed)
-docs/llms/ctx/*
-arc/
-scratch/
